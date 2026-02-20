@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { fetchGeminiResponse } from "../services/gemini";
 
 // Mock Data
 const MOCK_VIDEOS = [
@@ -16,12 +17,38 @@ const MOCK_FORUMS = [
 
 export default function Reparacion() {
     const [vehicleType, setVehicleType] = useState<"Auto" | "Moto" | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [repairQuery, setRepairQuery] = useState("");
     const [hasSearched, setHasSearched] = useState(false);
     const [showForums, setShowForums] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [aiResponse, setAiResponse] = useState<string[]>([]);
 
-    const handleSearch = () => {
-        setHasSearched(true);
+    const handleSearch = async () => {
+        if (!searchQuery.trim() || !repairQuery.trim()) {
+            alert("Por favor, introduce el vehículo y la reparación deseada.");
+            return;
+        }
+
+        setIsLoading(true);
+        setHasSearched(false);
         setShowForums(false);
+
+        try {
+            const prompt = `Eres un mecánico experto e instructor paso a paso (IA avanzada).
+Vehículo cliente: ${vehicleType === 'Moto' ? 'Motocicleta' : 'Automóvil'} - ${searchQuery}
+Reparación a realizar: ${repairQuery}
+
+Instrucciones: Dame una breve introducción en la primera línea. Luego, describe los 3 pasos principales de reparación. Usa viñetas o números para los pasos separados por intros. NO uses negritas ni sintaxis markdown que la UI no lea bien.`;
+
+            const result = await fetchGeminiResponse(prompt);
+            setAiResponse(result);
+            setHasSearched(true);
+        } catch (error) {
+            alert("Error al contactar con la IA para obtener la guía de reparación.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const openLink = (url: string) => {
@@ -49,13 +76,15 @@ export default function Reparacion() {
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={styles.label}>2. Búsqueda Directa del Vehículo</Text>
+                        <Text style={styles.label}>2. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                             <TextInput
                                 style={styles.searchInput}
                                 placeholder="Ej: Ford Focus 2015..."
                                 placeholderTextColor="#94a3b8"
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
                             />
                         </View>
                     </View>
@@ -70,6 +99,8 @@ export default function Reparacion() {
                                 multiline={true}
                                 numberOfLines={4}
                                 textAlignVertical="top"
+                                value={repairQuery}
+                                onChangeText={setRepairQuery}
                             />
                             <TouchableOpacity style={styles.voiceButton}>
                                 <Ionicons name="mic" size={24} color="#fff" />
@@ -82,6 +113,14 @@ export default function Reparacion() {
                         <Text style={styles.submitButtonText}>BUSCAR REPARACIÓN</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* INDICADOR DE CARGA */}
+                {isLoading && (
+                    <View style={{ padding: 30, alignItems: "center" }}>
+                        <ActivityIndicator size="large" color="#3b82f6" />
+                        <Text style={{ marginTop: 10, color: "#64748b" }}>Generando guía con IA de Gemini 3.1...</Text>
+                    </View>
+                )}
 
                 {/* RESULTADOS DE BÚSQUEDA */}
                 {hasSearched && (
@@ -104,11 +143,12 @@ export default function Reparacion() {
                                         <Ionicons name="sparkles" size={20} color="#0284c7" />
                                         <Text style={styles.iaTitle}>Paso a Paso por Gemini 3.1</Text>
                                     </View>
-                                    <Text style={styles.iaText}>Para realizar esta reparación, necesitarás las siguientes herramientas e instrucciones:</Text>
-                                    <Text style={styles.iaBullet}>• Herramientas: Llave inglesa, recipiente para aceite, filtro nuevo.</Text>
-                                    <Text style={styles.iaBullet}>• Paso 1: Localiza el tapón de vaciado debajo del cárter y aflójalo.</Text>
-                                    <Text style={styles.iaBullet}>• Paso 2: Deja drenar todo el aceite y reemplaza el filtro.</Text>
-                                    <Text style={styles.iaBullet}>• Paso 3: Vuelve a colocar el tapón y rellena con aceite nuevo según las especificaciones del fabricante.</Text>
+
+                                    {aiResponse.map((line, index) => (
+                                        <Text key={index} style={index === 0 ? styles.iaText : styles.iaBullet}>
+                                            {line}
+                                        </Text>
+                                    ))}
 
                                     <Image source={{ uri: 'https://images.unsplash.com/photo-1625067204646-7c0134dddfa3?q=80&w=400' }} style={styles.iaImage} />
                                     <Text style={styles.iaImageCaption}>Ubicación típica del tapón del cárter y filtro de aceite.</Text>

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { fetchGeminiResponse } from "../services/gemini";
 
 // Mock Data
 const MOCK_VIDEOS = [
@@ -22,9 +23,34 @@ export default function Diagnostico() {
     const [searchQuery, setSearchQuery] = useState("");
     const [symptoms, setSymptoms] = useState("");
 
-    const handleSearch = () => {
-        setHasSearched(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [aiResponse, setAiResponse] = useState<string[]>([]);
+
+    const handleSearch = async () => {
+        if (!searchQuery.trim() || !symptoms.trim()) {
+            alert("Por favor, indica los datos del vehículo y los síntomas experimentados para proceder.");
+            return;
+        }
+
+        setIsLoading(true);
+        setHasSearched(false);
         setShowForums(false);
+
+        try {
+            const prompt = `Eres un mecánico experto en diagnóstico automotriz (IA avanzada). 
+El vehículo es un: ${vehicleType === 'Moto' ? 'Motocicleta' : 'Automóvil'} - ${searchQuery}
+Los síntomas descritos son: ${symptoms}
+
+Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóstico general, seguido de una pequeña lista de 3 viñetas separadas por saltos de línea con las fallas más probables y cómo detectarlas. Sé preciso, técnico pero entendible y NO uses negritas/asteriscos de markdown.`;
+
+            const result = await fetchGeminiResponse(prompt);
+            setAiResponse(result);
+            setHasSearched(true);
+        } catch (error) {
+            alert("Hubo un error en nuestro servidor de diagnóstico 3.1. Reintente más tarde.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const openLink = (url: string) => {
@@ -52,16 +78,10 @@ export default function Diagnostico() {
                         </View>
                     </View>
 
-                    <View style={styles.section}>
-                        <Text style={styles.label}>2. Marca del Vehículo</Text>
-                        <TouchableOpacity style={styles.dropdown}>
-                            <Text style={styles.dropdownText}>Seleccionar marca...</Text>
-                            <Ionicons name="chevron-down" size={20} color="#64748b" />
-                        </TouchableOpacity>
-                    </View>
+
 
                     <View style={styles.section}>
-                        <Text style={styles.label}>3. O Buscar Directamente</Text>
+                        <Text style={styles.label}>2. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                             <TextInput
@@ -75,7 +95,7 @@ export default function Diagnostico() {
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={styles.label}>4. Describe el problema o síntomas</Text>
+                        <Text style={styles.label}>3. Describe el problema o síntomas</Text>
                         <View style={styles.textAreaContainer}>
                             <TextInput
                                 style={styles.textArea}
@@ -98,6 +118,14 @@ export default function Diagnostico() {
                         <Text style={styles.submitButtonText}>BUSCAR DIAGNÓSTICO</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* INDICADOR DE CARGA */}
+                {isLoading && (
+                    <View style={{ padding: 30, alignItems: "center" }}>
+                        <ActivityIndicator size="large" color="#3b82f6" />
+                        <Text style={{ marginTop: 10, color: "#64748b" }}>Analizando diagnóstico con IA...</Text>
+                    </View>
+                )}
 
                 {/* RESULTADOS DE BÚSQUEDA */}
                 {hasSearched && (
@@ -123,12 +151,12 @@ export default function Diagnostico() {
                                         <Ionicons name="sparkles" size={20} color="#8b5cf6" />
                                         <Text style={styles.iaTitle}>Diagnóstico por Gemini 3.1</Text>
                                     </View>
-                                    <Text style={styles.iaText}>
-                                        Basado en tus síntomas, existen varias posibilidades principales:
-                                    </Text>
-                                    <Text style={styles.iaBullet}>1. Fallo en las bujías o bobinas de encendido, lo que causa tirones ("misfire").</Text>
-                                    <Text style={styles.iaBullet}>2. Inyectores de combustible sucios u obstruidos.</Text>
-                                    <Text style={styles.iaBullet}>3. Problemas con el filtro de aire o válvula EGR.</Text>
+
+                                    {aiResponse.map((line, index) => (
+                                        <Text key={index} style={index === 0 ? styles.iaText : styles.iaBullet}>
+                                            {line}
+                                        </Text>
+                                    ))}
 
                                     <Image
                                         source={{ uri: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400' }}

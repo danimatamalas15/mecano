@@ -11,7 +11,17 @@ const MOCK_RESULTS = [
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
+    const [vehicleQuery, setVehicleQuery] = useState("");
+    const [itemQuery, setItemQuery] = useState("");
     const [orderFilter, setOrderFilter] = useState<"Precio" | "Calidad" | "Nombre">("Precio");
+
+    const handleSearch = () => {
+        if (!vehicleQuery.trim() || !itemQuery.trim()) {
+            alert("Por favor, rellena el vehículo y la herramienta que buscas.");
+            return;
+        }
+        setHasSearched(true);
+    };
 
     const openLink = (store: string) => {
         alert(`Abriendo tienda externa:\n${store}`);
@@ -23,31 +33,22 @@ export default function Herramientas() {
             {/* FORMULARIO DE BÚSQUEDA */}
             <View style={styles.formContainer}>
                 <View style={styles.section}>
-                    <Text style={styles.label}>1. Búsqueda Directa</Text>
+                    <Text style={styles.label}>1. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
                     <View style={styles.searchContainer}>
-                        <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput style={styles.searchInput} placeholder="Ej: Llave dinamométrica..." placeholderTextColor="#94a3b8" />
-                        <TouchableOpacity style={styles.voiceButtonSmall}>
-                            <Ionicons name="mic" size={20} color="#fff" />
-                        </TouchableOpacity>
+                        <Ionicons name="car-outline" size={20} color="#94a3b8" style={styles.searchIcon} />
+                        <TextInput style={styles.searchInput} placeholder="Ej: Ford Focus 2015..." placeholderTextColor="#94a3b8" value={vehicleQuery} onChangeText={setVehicleQuery} />
                     </View>
                 </View>
-
-                <View style={styles.divider} />
 
                 <View style={styles.section}>
-                    <Text style={styles.label}>2. Búsqueda por Marca</Text>
-                    <TouchableOpacity style={styles.dropdown}>
-                        <Text style={styles.dropdownText}>Seleccionar marca de herramientas...</Text>
-                        <Ionicons name="chevron-down" size={20} color="#64748b" />
-                    </TouchableOpacity>
-                    <View style={[styles.searchContainer, { marginTop: 12 }]}>
+                    <Text style={styles.label}>2. ¿Qué herramienta necesitas?</Text>
+                    <View style={styles.searchContainer}>
                         <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput style={styles.searchInput} placeholder="Buscar herramienta de esta marca..." placeholderTextColor="#94a3b8" />
+                        <TextInput style={styles.searchInput} placeholder="Ej: Llave dinamométrica..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
                     </View>
                 </View>
 
-                <TouchableOpacity style={styles.submitButton} onPress={() => setHasSearched(true)}>
+                <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
                     <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
                     <Text style={styles.submitButtonText}>BUSCAR HERRAMIENTAS</Text>
                 </TouchableOpacity>
@@ -56,7 +57,8 @@ export default function Herramientas() {
             {/* RESULTADOS DE BÚSQUEDA */}
             {hasSearched && (
                 <View style={styles.resultsContainer}>
-                    <Text style={styles.resultsTitle}>Mejores Ofertas Encontradas</Text>
+                    <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
+                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {vehicleQuery}</Text>
 
                     {/* FILTROS */}
                     <View style={styles.filtersWrapper}>
