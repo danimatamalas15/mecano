@@ -1,8 +1,8 @@
 export const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent";
 
 export const fetchGeminiResponse = async (prompt: string): Promise<string[]> => {
-    // Busca la clave de la API en las variables de entorno de Expo
-    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    // Busca la clave de la API en las variables de entorno o usa la proporcionada como fallback
+    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "AIzaSyAtEIsgKkWK4815x5wMTGM5Ic-4YcxsIU4";
 
     if (!apiKey) {
         console.warn("Falta EXPO_PUBLIC_GEMINI_API_KEY en .env. Devolviendo respuesta inteligente simulada para el prompt:", prompt);
