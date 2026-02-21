@@ -1,8 +1,8 @@
 export const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
 
 export const fetchGeminiResponse = async (prompt: string): Promise<string[]> => {
-    // Busca la clave de la API en las variables de entorno o usa la proporcionada como fallback
-    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "AIzaSyAlZPIQehq6V6OsnyVbHktHxxgfpCFSY48";
+    // Busca la clave de la API en las variables de entorno exclusivamente por seguridad
+    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
     if (!apiKey) {
         console.warn("Falta EXPO_PUBLIC_GEMINI_API_KEY en .env. Devolviendo respuesta inteligente simulada para el prompt:", prompt);
