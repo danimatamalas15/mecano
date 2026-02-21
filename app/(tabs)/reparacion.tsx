@@ -45,7 +45,9 @@ Instrucciones: Dame una breve introducción en la primera línea. Luego, describ
             setAiResponse(result);
             setHasSearched(true);
         } catch (error) {
-            alert("Error al contactar con la IA para obtener la guía de reparación.");
+            console.error("Error en reparacion:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            alert(`Error al contactar con la IA para obtener la guía de reparación. Detalle: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }

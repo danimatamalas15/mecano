@@ -47,7 +47,9 @@ Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóst
             setAiResponse(result);
             setHasSearched(true);
         } catch (error) {
-            alert("Hubo un error en nuestro servidor de diagnóstico 3.1. Reintente más tarde.");
+            console.error("Error en diagnostico:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            alert(`Hubo un error en nuestro servidor de diagnóstico 3.1. Detalle: ${errorMessage}. Reintente más tarde.`);
         } finally {
             setIsLoading(false);
         }
