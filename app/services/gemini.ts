@@ -32,7 +32,19 @@ export const fetchGeminiResponse = async (prompt: string): Promise<string[]> => 
         });
 
         if (!response.ok) {
-            throw new Error(`Error en la API de Gemini: ${response.statusText}`);
+            let errorDetail = response.statusText;
+            try {
+                const errorBody = await response.json();
+                if (errorBody && errorBody.error && errorBody.error.message) {
+                    errorDetail = errorBody.error.message;
+                } else {
+                    errorDetail = JSON.stringify(errorBody);
+                }
+            } catch (e) {
+                // Si no se puede parsear el JSON, usar el texto original o el status HTTP
+                errorDetail = response.statusText || `HTTP Status: ${response.status}`;
+            }
+            throw new Error(`[HTTP ${response.status}] ${errorDetail}`);
         }
 
         const data = await response.json();
