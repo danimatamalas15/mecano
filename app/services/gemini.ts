@@ -1,4 +1,4 @@
-export const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
+export const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
 export const fetchGeminiResponse = async (prompt: string): Promise<string[]> => {
     // Busca la clave de la API en las variables de entorno o usa la proporcionada como fallback
