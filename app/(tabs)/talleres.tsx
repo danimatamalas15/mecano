@@ -55,7 +55,12 @@ export default function Talleres() {
                         setIsLoadingLocation(false);
                         return;
                     }
-                    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+
+                    // Esperamos deliberadamente 2 segundos para dar tiempo al navegador/móvil a encender el GPS tras el "Sí"
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    // Forzamos "Highest" en lugar de "Balanced" para evitar que el navegador use la IP (que da Madrid por defecto en España)
+                    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
                     center = { lat: location.coords.latitude, lon: location.coords.longitude };
                     setUserLocation(center);
                 } else {
