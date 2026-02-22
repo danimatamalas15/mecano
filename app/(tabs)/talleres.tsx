@@ -81,7 +81,16 @@ export default function Talleres() {
                 setSearchCenter(center);
                 const currentCenter = center;
                 try {
-                    const response = await fetch(`/api/talleres?lat=${currentCenter.lat}&lng=${currentCenter.lon}&tipo=${tallerType || ''}`);
+                    // Detectar base URL dinámicamente según el entorno para Vercel o local
+                    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                    const apiUrl = `${baseUrl}/api/talleres?lat=${currentCenter.lat}&lng=${currentCenter.lon}&tipo=${tallerType || ''}`;
+
+                    const response = await fetch(apiUrl);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const data = await response.json();
 
                     if (response.ok && Array.isArray(data)) {
@@ -101,9 +110,9 @@ export default function Talleres() {
                         setMockResults([]);
                         setLocationError(data.error || "No se encontraron talleres.");
                     }
-                } catch (error) {
+                } catch (error: any) {
                     console.error("Error fetching talleres:", error);
-                    setLocationError("Error al contactar con el servidor.");
+                    setLocationError(`Fallo de conexión: ${error.message || "Error al contactar con el servidor."}`);
                 }
                 setOrderFilter("Proximidad");
                 setHasSearched(true);
