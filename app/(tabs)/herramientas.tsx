@@ -2,34 +2,35 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-// Generar 100 resultados de prueba
-const TOOL_NAMES = ["Llave Dinamométrica", "Juego Carracas", "Gato Hidráulico", "Destornillador Eléctrico", "Scanner OBD2", "Bomba de Aceite", "Compresor de Aire"];
-const STORES = ["Amazon", "Ebay", "AliExpress", "AutoParts", "MecanoStore"];
-
-const MOCK_RESULTS = Array.from({ length: 100 }).map((_, i) => ({
-    id: String(i + 1),
-    name: `${TOOL_NAMES[i % TOOL_NAMES.length]} ${i + 1}`,
-    store: STORES[i % STORES.length],
-    price: `${(Math.random() * 100 + 10).toFixed(2).replace('.', ',')} €`,
-    rating: (Math.random() * 2 + 3).toFixed(1), // entre 3.0 y 5.0
-    image: [
-        "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150",
-        "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150",
-        "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150"
-    ][i % 3]
-}));
-
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
-    const [vehicleQuery, setVehicleQuery] = useState("");
     const [itemQuery, setItemQuery] = useState("");
     const [orderFilter, setOrderFilter] = useState<"Precio" | "Calidad" | "Nombre">("Precio");
+    const [mockResults, setMockResults] = useState<any[]>([]);
+
+    const generateMockResults = (query: string) => {
+        const STORES = ["Amazon", "Ebay", "AliExpress", "AutoParts", "MecanoStore"];
+        return Array.from({ length: 100 }).map((_, i) => ({
+            id: String(i + 1),
+            name: `${query} Profesional - Modelo ${i + 1}`,
+            store: STORES[i % STORES.length],
+            price: `${(Math.random() * 100 + 10).toFixed(2).replace('.', ',')} €`,
+            rating: (Math.random() * 2 + 3).toFixed(1), // entre 3.0 y 5.0
+            image: [
+                "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150",
+                "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150",
+                "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150"
+            ][i % 3]
+        }));
+    };
 
     const handleSearch = () => {
         if (!itemQuery.trim()) {
             alert("Por favor, introduce la herramienta que deseas buscar.");
             return;
         }
+        setMockResults(generateMockResults(itemQuery));
+        setOrderFilter("Precio"); // Predefinido por precio menor a mayor cada vez que se busca
         setHasSearched(true);
     };
 
@@ -37,7 +38,7 @@ export default function Herramientas() {
         alert(`Abriendo tienda externa:\n${store}`);
     };
 
-    const sortedResults = [...MOCK_RESULTS].sort((a, b) => {
+    const sortedResults = [...mockResults].sort((a, b) => {
         if (orderFilter === "Precio") {
             const priceA = parseFloat(a.price.replace(',', '.'));
             const priceB = parseFloat(b.price.replace(',', '.'));

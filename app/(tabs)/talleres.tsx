@@ -5,15 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOp
 
 type TallerType = "Mecánica" | "Chapa" | "Electrónica" | "Neumáticos";
 
-// Mock Data
-// Coordenadas fijas de Madrid centro para las pruebas: 40.4168, -3.7038
-const MOCK_TALLERES = [
-    { id: "1", name: "Taller Mecánico Hermanos Ruiz", address: "Calle Mayor 12, Madrid", lat: 40.4150, lon: -3.7040, rating: "4.9", reviews: 154, type: "Mecánica" },
-    { id: "2", name: "Auto Repuestos Motor Express", address: "Avenida de América 45, Madrid", lat: 40.4380, lon: -3.6760, rating: "4.5", reviews: 89, type: "Mecánica" },
-    { id: "3", name: "Servicio Oficial Bosch Service", address: "Calle de Alcalá 120, Madrid", lat: 40.4250, lon: -3.6700, rating: "4.2", reviews: 312, type: "Electrónica" },
-    { id: "4", name: "Neumáticos Cibeles", address: "Plaza de Cibeles, Madrid", lat: 40.4193, lon: -3.6930, rating: "4.8", reviews: 201, type: "Neumáticos" },
-    { id: "5", name: "Chapa y Pintura El Retiro", address: "Av. Menéndez Pelayo, Madrid", lat: 40.4110, lon: -3.6780, rating: "4.1", reviews: 54, type: "Chapa" }
-];
+// Mock Data Dinámico
 
 // Fórmula Haversine para calcular distancia en km entre dos coordenadas
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -37,36 +29,84 @@ export default function Talleres() {
     const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [locationError, setLocationError] = useState("");
+    const [manualAddress, setManualAddress] = useState("");
+    const [searchCenter, setSearchCenter] = useState<{ lat: number, lon: number } | null>(null);
+    const [mockResults, setMockResults] = useState<any[]>([]);
 
-    const getLocation = async () => {
+    const generateMockTalleres = (centerLat: number, centerLon: number, typeFilter: TallerType | null) => {
+        const types: TallerType[] = ["Mecánica", "Chapa", "Electrónica", "Neumáticos"];
+        return Array.from({ length: 50 }).map((_, i) => {
+            const r = 0.2; // ~20km de dispersión
+            const latOffset = (Math.random() - 0.5) * r;
+            const lonOffset = (Math.random() - 0.5) * r;
+            const tType = typeFilter || types[i % types.length];
+            return {
+                id: String(i + 1),
+                name: `Taller de ${tType} ${["Avanzado", "Rápido", "Pro", "Especializado", "Center"][i % 5]} ${i + 1}`,
+                address: `Centro de reparaciones a ${(Math.random() * 20).toFixed(1)} km del centro`,
+                lat: centerLat + latOffset,
+                lon: centerLon + lonOffset,
+                rating: (Math.random() * 2 + 3).toFixed(1),
+                reviews: Math.floor(Math.random() * 300) + 10,
+                type: tType
+            };
+        });
+    };
+
+    const handleSearch = async () => {
+        if (!locationType) {
+            alert("Por favor, selecciona el método de ubicación.");
+            return;
+        }
+
         setIsLoadingLocation(true);
         setLocationError("");
         setHasSearched(false);
 
+        let center = null;
+
         try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setLocationError("Permiso de ubicación denegado. Prueba con búsqueda manual.");
-                setIsLoadingLocation(false);
-                return;
+            if (locationType === "Auto") {
+                if (!userLocation) {
+                    const { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                        setLocationError("Permiso de ubicación denegado. Prueba con búsqueda manual.");
+                        setIsLoadingLocation(false);
+                        return;
+                    }
+                    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                    center = { lat: location.coords.latitude, lon: location.coords.longitude };
+                    setUserLocation(center);
+                } else {
+                    center = userLocation;
+                }
+            } else if (locationType === "Manual") {
+                if (!manualAddress.trim()) {
+                    setLocationError("Por favor, introduce una dirección válida para buscar.");
+                    setIsLoadingLocation(false);
+                    return;
+                }
+                const geocodeResults = await Location.geocodeAsync(manualAddress);
+                if (geocodeResults.length > 0) {
+                    center = { lat: geocodeResults[0].latitude, lon: geocodeResults[0].longitude };
+                } else {
+                    setLocationError("No pudimos encontrar esa dirección. Sé más específico.");
+                    setIsLoadingLocation(false);
+                    return;
+                }
             }
 
-            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-            setUserLocation({ lat: location.coords.latitude, lon: location.coords.longitude });
-            setLocationType("Auto");
-            setHasSearched(true);
+            if (center) {
+                setSearchCenter(center);
+                const generated = generateMockTalleres(center.lat, center.lon, tallerType);
+                setMockResults(generated);
+                setOrderFilter("Proximidad");
+                setHasSearched(true);
+            }
         } catch (error) {
-            setLocationError("No se pudo obtener la ubicación actual.");
+            setLocationError("Ocurrió un error al procesar la ubicación.");
         } finally {
             setIsLoadingLocation(false);
-        }
-    };
-
-    const handleSearch = () => {
-        if (locationType === "Auto" && !userLocation) {
-            getLocation();
-        } else {
-            setHasSearched(true);
         }
     };
 
@@ -107,12 +147,8 @@ export default function Talleres() {
                 <View style={styles.section}>
                     <Text style={styles.label}>2. Ubicación</Text>
                     <View style={styles.row}>
-                        <TouchableOpacity style={[styles.typeButton, locationType === "Auto" && styles.typeButtonActive]} onPress={getLocation}>
-                            {isLoadingLocation ? (
-                                <ActivityIndicator size="small" color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
-                            ) : (
-                                <Ionicons name="location" size={24} color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
-                            )}
+                        <TouchableOpacity style={[styles.typeButton, locationType === "Auto" && styles.typeButtonActive]} onPress={() => setLocationType("Auto")}>
+                            <Ionicons name="location" size={24} color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
                             <Text style={[styles.typeButtonText, locationType === "Auto" && styles.typeTextActive]}>Ubicación Actual</Text>
                         </TouchableOpacity>
 
@@ -127,16 +163,26 @@ export default function Talleres() {
                     <View style={styles.section}>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                            <TextInput style={styles.searchInput} placeholder="Ej: Madrid, Calle Mayor 12..." placeholderTextColor="#94a3b8" />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Ej: Madrid, Calle Mayor 12..."
+                                placeholderTextColor="#94a3b8"
+                                value={manualAddress}
+                                onChangeText={setManualAddress}
+                            />
                         </View>
                     </View>
                 )}
 
                 {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
 
-                <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
-                    <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.submitButtonText}>BUSCAR TALLERES</Text>
+                <TouchableOpacity style={styles.submitButton} onPress={handleSearch} disabled={isLoadingLocation}>
+                    {isLoadingLocation ? (
+                        <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                    ) : (
+                        <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    )}
+                    <Text style={styles.submitButtonText}>{isLoadingLocation ? "BUSCANDO..." : "BUSCAR TALLERES"}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -164,20 +210,11 @@ export default function Talleres() {
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
                         {
-                            MOCK_TALLERES
+                            mockResults
                                 .map((taller) => {
-                                    // Calcular distancia si tenemos la del usuario, de lo contrario usar un default para la demo
-                                    let distKm = 0;
-                                    if (userLocation) {
-                                        distKm = calculateDistance(userLocation.lat, userLocation.lon, taller.lat, taller.lon);
-                                    } else {
-                                        // Fake default distance if manual search
-                                        distKm = Math.random() * 5 + 1;
-                                    }
+                                    const distKm = searchCenter ? calculateDistance(searchCenter.lat, searchCenter.lon, taller.lat, taller.lon) : 0;
                                     return { ...taller, distValue: distKm, distanceText: distKm.toFixed(1) + " km" };
                                 })
-                                // Filtrar por tipo (si seleccionó uno)
-                                .filter(t => tallerType ? t.type === tallerType : true)
                                 // Ordenar
                                 .sort((a, b) => {
                                     if (orderFilter === "Proximidad") {
