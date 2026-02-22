@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
@@ -10,18 +10,23 @@ export default function Herramientas() {
 
     const generateMockResults = (query: string) => {
         const STORES = ["Amazon", "Ebay", "AliExpress", "AutoParts", "MecanoStore"];
-        return Array.from({ length: 100 }).map((_, i) => ({
-            id: String(i + 1),
-            name: `${query} Profesional - Modelo ${i + 1}`,
-            store: STORES[i % STORES.length],
-            price: `${(Math.random() * 100 + 10).toFixed(2).replace('.', ',')} €`,
-            rating: (Math.random() * 2 + 3).toFixed(1), // entre 3.0 y 5.0
-            image: [
-                "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150",
-                "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150",
-                "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150"
-            ][i % 3]
-        }));
+        return Array.from({ length: 100 }).map((_, i) => {
+            const storeName = STORES[i % STORES.length];
+            const itemName = `${query} Profesional - Modelo ${i + 1}`;
+            return {
+                id: String(i + 1),
+                name: itemName,
+                store: storeName,
+                price: `${(Math.random() * 100 + 10).toFixed(2).replace('.', ',')} €`,
+                rating: (Math.random() * 2 + 3).toFixed(1), // entre 3.0 y 5.0
+                image: [
+                    "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150",
+                    "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150",
+                    "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150"
+                ][i % 3],
+                url: `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(itemName + ' ' + storeName)}`
+            };
+        });
     };
 
     const handleSearch = () => {
@@ -34,8 +39,8 @@ export default function Herramientas() {
         setHasSearched(true);
     };
 
-    const openLink = (store: string) => {
-        alert(`Abriendo tienda externa:\n${store}`);
+    const openLink = (url: string) => {
+        Linking.openURL(url).catch(err => console.error("Error al abrir URL:", err));
     };
 
     const sortedResults = [...mockResults].sort((a, b) => {
@@ -102,7 +107,7 @@ export default function Herramientas() {
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
                         {sortedResults.map((item) => (
-                            <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.store)}>
+                            <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.url)}>
                                 <Image source={{ uri: item.image }} style={styles.resultImage} />
                                 <View style={styles.resultInfo}>
                                     <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
