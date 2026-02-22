@@ -34,35 +34,6 @@ export default function Talleres() {
     const [searchCenter, setSearchCenter] = useState<{ lat: number, lon: number } | null>(null);
     const [mockResults, setMockResults] = useState<any[]>([]);
 
-    const generateMockTalleres = (centerLat: number, centerLon: number, typeFilter: TallerType | null) => {
-        const types: TallerType[] = ["Mecánica", "Chapa", "Electrónica", "Neumáticos"];
-        const realNames = ["Talleres Paco", "Midas", "Norauto", "Feuvert", "Bosch Car Service", "Talleres Hermanos García", "MotorTown", "Automecánica Integral", "First Stop", "Confortauto"];
-
-        return Array.from({ length: 50 }).map((_, i) => {
-            // Mitad de los talleres (25) estarán a menos de 2 km, y los otros dispersos más lejos
-            const isNear = i < 25;
-            const r = isNear ? 0.015 : 0.08; // 0.015 grados = ~1.6km | 0.08 = ~9km de radio 
-            const latOffset = (Math.random() - 0.5) * r;
-            const lonOffset = (Math.random() - 0.5) * r;
-            const tType = typeFilter || types[i % types.length];
-            const baseName = realNames[i % realNames.length];
-            const finalName = `${baseName} - Especialistas en ${tType} ${i + 1}`;
-            const ratingValue = (Math.random() * 2 + 3).toFixed(1);
-
-            return {
-                id: String(i + 1),
-                name: finalName,
-                address: `Calle Ficticia del Motor ${i + 1}`,
-                lat: centerLat + latOffset,
-                lon: centerLon + lonOffset,
-                rating: ratingValue,
-                reviews: Math.floor(Math.random() * 300) + 10,
-                type: tType,
-                url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(finalName)}`
-            };
-        });
-    };
-
     const handleSearch = async () => {
         if (!locationType) {
             alert("Por favor, selecciona el método de ubicación.");
@@ -73,7 +44,7 @@ export default function Talleres() {
         setLocationError("");
         setHasSearched(false);
 
-        let center = null;
+        let center: { lat: number, lon: number } | null = null;
 
         try {
             if (locationType === "Auto") {
@@ -108,8 +79,32 @@ export default function Talleres() {
 
             if (center) {
                 setSearchCenter(center);
-                const generated = generateMockTalleres(center.lat, center.lon, tallerType);
-                setMockResults(generated);
+                const currentCenter = center;
+                try {
+                    const response = await fetch(`/api/talleres?lat=${currentCenter.lat}&lng=${currentCenter.lon}&tipo=${tallerType || ''}`);
+                    const data = await response.json();
+
+                    if (response.ok && Array.isArray(data)) {
+                        const mappedResults = data.map((place: any, index: number) => ({
+                            id: place.place_id || String(index),
+                            name: place.name,
+                            address: place.vicinity || place.formatted_address || "Dirección no disponible",
+                            lat: place.geometry?.location?.lat || currentCenter.lat,
+                            lon: place.geometry?.location?.lng || currentCenter.lon,
+                            rating: place.rating ? place.rating.toFixed(1) : "N/A",
+                            reviews: place.user_ratings_total || 0,
+                            type: tallerType || "Mecánica",
+                            url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`
+                        }));
+                        setMockResults(mappedResults);
+                    } else {
+                        setMockResults([]);
+                        setLocationError(data.error || "No se encontraron talleres.");
+                    }
+                } catch (error) {
+                    console.error("Error fetching talleres:", error);
+                    setLocationError("Error al contactar con el servidor.");
+                }
                 setOrderFilter("Proximidad");
                 setHasSearched(true);
             }
