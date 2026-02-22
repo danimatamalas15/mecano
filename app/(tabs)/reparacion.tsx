@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { fetchGeminiResponse } from "../services/gemini";
+import { fetchChatGPTResponse } from "../services/openai";
 
 // Mock Data
 const MOCK_VIDEOS = [
@@ -41,7 +41,7 @@ Reparación a realizar: ${repairQuery}
 
 Instrucciones: Dame una breve introducción en la primera línea. Luego, describe los 3 pasos principales de reparación. Usa viñetas o números para los pasos separados por intros. NO uses negritas ni sintaxis markdown que la UI no lea bien.`;
 
-            const result = await fetchGeminiResponse(prompt);
+            const result = await fetchChatGPTResponse(prompt);
             setAiResponse(result);
             setHasSearched(true);
         } catch (error) {
@@ -120,7 +120,7 @@ Instrucciones: Dame una breve introducción en la primera línea. Luego, describ
                 {isLoading && (
                     <View style={{ padding: 30, alignItems: "center" }}>
                         <ActivityIndicator size="large" color="#3b82f6" />
-                        <Text style={{ marginTop: 10, color: "#64748b" }}>Generando guía con IA de Gemini 3.1...</Text>
+                        <Text style={{ marginTop: 10, color: "#64748b" }}>Generando guía con ChatGPT...</Text>
                     </View>
                 )}
 
@@ -143,7 +143,7 @@ Instrucciones: Dame una breve introducción en la primera línea. Luego, describ
                                 <View style={styles.iaCard}>
                                     <View style={styles.iaHeader}>
                                         <Ionicons name="sparkles" size={20} color="#0284c7" />
-                                        <Text style={styles.iaTitle}>Paso a Paso por Gemini 3.1</Text>
+                                        <Text style={styles.iaTitle}>Paso a Paso por ChatGPT</Text>
                                     </View>
 
                                     {aiResponse.map((line, index) => (

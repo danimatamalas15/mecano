@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { fetchGeminiResponse } from "../services/gemini";
+import { fetchChatGPTResponse } from "../services/openai";
 
 // Mock Data
 const MOCK_VIDEOS = [
@@ -43,13 +43,13 @@ Los síntomas descritos son: ${symptoms}
 
 Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóstico general, seguido de una pequeña lista de 3 viñetas separadas por saltos de línea con las fallas más probables y cómo detectarlas. Sé preciso, técnico pero entendible y NO uses negritas/asteriscos de markdown.`;
 
-            const result = await fetchGeminiResponse(prompt);
+            const result = await fetchChatGPTResponse(prompt);
             setAiResponse(result);
             setHasSearched(true);
         } catch (error) {
             console.error("Error en diagnostico:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            alert(`Hubo un error en nuestro servidor de diagnóstico 3.1. Detalle: ${errorMessage}. Reintente más tarde.`);
+            alert(`Hubo un error en nuestro servidor de diagnóstico de ChatGPT. Detalle: ${errorMessage}. Reintente más tarde.`);
         } finally {
             setIsLoading(false);
         }
@@ -125,7 +125,7 @@ Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóst
                 {isLoading && (
                     <View style={{ padding: 30, alignItems: "center" }}>
                         <ActivityIndicator size="large" color="#3b82f6" />
-                        <Text style={{ marginTop: 10, color: "#64748b" }}>Analizando diagnóstico con IA...</Text>
+                        <Text style={{ marginTop: 10, color: "#64748b" }}>Analizando diagnóstico con ChatGPT...</Text>
                     </View>
                 )}
 
@@ -140,7 +140,7 @@ Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóst
                             >
                                 <Ionicons name={showForums ? "bulb" : "earth"} size={18} color="#fff" />
                                 <Text style={styles.forumsToggleText}>
-                                    {showForums ? "VER DIAGNÓSTICO IA Y VIDEOS" : "BUSCAR TUTORIALES EN FOROS Y WEBS"}
+                                    {showForums ? "VER DIAGNÓSTICO CHATGPT Y VIDEOS" : "BUSCAR TUTORIALES EN FOROS Y WEBS"}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -151,7 +151,7 @@ Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóst
                                 <View style={styles.iaCard}>
                                     <View style={styles.iaHeader}>
                                         <Ionicons name="sparkles" size={20} color="#8b5cf6" />
-                                        <Text style={styles.iaTitle}>Diagnóstico por Gemini 3.1</Text>
+                                        <Text style={styles.iaTitle}>Diagnóstico por ChatGPT</Text>
                                     </View>
 
                                     {aiResponse.map((line, index) => (
