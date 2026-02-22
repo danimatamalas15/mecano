@@ -1,14 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
-
-// Mock Data
-const MOCK_VIDEOS = [
-    { id: "1", title: "Cómo cambiar aceite y filtro paso a paso", views: "2M visualizaciones", image: "https://images.unsplash.com/photo-1596765792226-e17ebfe6af94?q=80&w=200", lang: "Español" },
-    { id: "2", title: "Oil Change Tutorial (Subtítulos en Español)", views: "1.5M visualizaciones", image: "https://images.unsplash.com/photo-1625067204646-7c0134dddfa3?q=80&w=200", lang: "Inglés - Auto Traducido" },
-    { id: "3", title: "Errores comunes al cambiar el aceite", views: "800K visualizaciones", image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?q=80&w=200", lang: "Español" }
-];
 
 const MOCK_FORUMS = [
     { id: "1", title: "Guía definitiva: Mantenimiento básico para principiantes", source: "TuMecanico.es", date: "Hace 1 semana", lang: "Español" },
@@ -23,6 +16,23 @@ export default function Reparacion() {
     const [showForums, setShowForums] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [aiResponse, setAiResponse] = useState<string[]>([]);
+    const [mockVideos, setMockVideos] = useState<any[]>([]);
+
+    const generateMockVideos = (query: string, repair: string) => {
+        return Array.from({ length: 20 }).map((_, i) => ({
+            id: String(i + 1),
+            title: `Guía Definitiva: ${repair.substring(0, 20)}... en ${query || 'tu vehículo'} - Parte ${i + 1}`,
+            views: `${Math.floor(Math.random() * 900) + 10}K visualizaciones`,
+            image: [
+                "https://images.unsplash.com/photo-1596765792226-e17ebfe6af94?q=80&w=200",
+                "https://images.unsplash.com/photo-1625067204646-7c0134dddfa3?q=80&w=200",
+                "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?q=80&w=200",
+                "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=200"
+            ][i % 4],
+            lang: i % 3 === 0 ? "Inglés - Auto Traducido" : "Español",
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + " " + repair)}`
+        }));
+    };
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !repairQuery.trim()) {
@@ -35,14 +45,19 @@ export default function Reparacion() {
         setShowForums(false);
 
         try {
-            const prompt = `Eres un mecánico experto e instructor paso a paso (IA avanzada).
+            const prompt = `Eres un mecánico experto e instructor paso a paso avanzado.
 Vehículo cliente: ${vehicleType === 'Moto' ? 'Motocicleta' : 'Automóvil'} - ${searchQuery}
 Reparación a realizar: ${repairQuery}
 
-Instrucciones: Dame una breve introducción en la primera línea. Luego, describe los 3 pasos principales de reparación. Usa viñetas o números para los pasos separados por intros. NO uses negritas ni sintaxis markdown que la UI no lea bien.`;
+Instrucciones: Analiza meticulosamente el modelo específico del vehículo y la reparación solicitada. Proporciona una guía exhaustiva y sumamente detallada. Tu respuesta debe incluir:
+1. Una introducción técnica profundizando en las especificaciones, cuidados y herramientas necesarias para esta reparación en este modelo específico.
+2. Un listado extenso paso a paso, detallado a nivel técnico y ordenado cronológicamente.
+3. Consejos de seguridad y prevenciones de errores comunes durante el desmontaje y ensamblaje.
+Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-) o números (1., 2., ...).`;
 
             const result = await fetchChatGPTResponse(prompt);
             setAiResponse(result);
+            setMockVideos(generateMockVideos(searchQuery, repairQuery));
             setHasSearched(true);
         } catch (error) {
             console.error("Error en reparacion:", error);
@@ -54,7 +69,7 @@ Instrucciones: Dame una breve introducción en la primera línea. Luego, describ
     };
 
     const openLink = (url: string) => {
-        alert(`Abriendo navegador externo/YouTube:\n${url}`);
+        Linking.openURL(url).catch((err) => console.error("Error abriendo URL: ", err));
     };
 
     return (
@@ -158,9 +173,9 @@ Instrucciones: Dame una breve introducción en la primera línea. Luego, describ
 
                                 {/* YOUTUBE VIDEOS */}
                                 <View style={styles.videosSection}>
-                                    <Text style={styles.sectionSubtitle}>Vídeos de YouTube Relacionados</Text>
-                                    {MOCK_VIDEOS.map(video => (
-                                        <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => openLink(`https://youtube.com/watch?v=mock_video_${video.id}`)}>
+                                    <Text style={styles.sectionSubtitle}>20 Vídeos de YouTube Relacionados a tu consulta</Text>
+                                    {mockVideos.map(video => (
+                                        <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => openLink(video.url)}>
                                             <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
                                             <View style={styles.videoInfo}>
                                                 <Text style={styles.videoTitle}>{video.title}</Text>

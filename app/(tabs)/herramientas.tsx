@@ -2,12 +2,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-// Mock Data
-const MOCK_RESULTS = [
-    { id: "1", name: "Llave Dinamométrica 1/2'' Profesional", store: "Amazon", price: "45,99 €", rating: "4.9", image: "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150" },
-    { id: "2", name: "Juego Carracas 108 piezas Bosch", store: "Ebay", price: "55,00 €", rating: "4.7", image: "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150" },
-    { id: "3", name: "Gato Hidráulico 2 Toneladas", store: "AliExpress", price: "28,50 €", rating: "4.2", image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150" }
-];
+// Generar 100 resultados de prueba
+const TOOL_NAMES = ["Llave Dinamométrica", "Juego Carracas", "Gato Hidráulico", "Destornillador Eléctrico", "Scanner OBD2", "Bomba de Aceite", "Compresor de Aire"];
+const STORES = ["Amazon", "Ebay", "AliExpress", "AutoParts", "MecanoStore"];
+
+const MOCK_RESULTS = Array.from({ length: 100 }).map((_, i) => ({
+    id: String(i + 1),
+    name: `${TOOL_NAMES[i % TOOL_NAMES.length]} ${i + 1}`,
+    store: STORES[i % STORES.length],
+    price: `${(Math.random() * 100 + 10).toFixed(2).replace('.', ',')} €`,
+    rating: (Math.random() * 2 + 3).toFixed(1), // entre 3.0 y 5.0
+    image: [
+        "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150",
+        "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150",
+        "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150"
+    ][i % 3]
+}));
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
@@ -16,8 +26,8 @@ export default function Herramientas() {
     const [orderFilter, setOrderFilter] = useState<"Precio" | "Calidad" | "Nombre">("Precio");
 
     const handleSearch = () => {
-        if (!vehicleQuery.trim() || !itemQuery.trim()) {
-            alert("Por favor, rellena el vehículo y la herramienta que buscas.");
+        if (!itemQuery.trim()) {
+            alert("Por favor, introduce la herramienta que deseas buscar.");
             return;
         }
         setHasSearched(true);
@@ -27,21 +37,31 @@ export default function Herramientas() {
         alert(`Abriendo tienda externa:\n${store}`);
     };
 
+    const sortedResults = [...MOCK_RESULTS].sort((a, b) => {
+        if (orderFilter === "Precio") {
+            const priceA = parseFloat(a.price.replace(',', '.'));
+            const priceB = parseFloat(b.price.replace(',', '.'));
+            return priceA - priceB;
+        }
+        if (orderFilter === "Calidad") {
+            const ratingA = parseFloat(a.rating);
+            const ratingB = parseFloat(b.rating);
+            // Ordenar calidad de mayor a menor
+            return ratingB - ratingA;
+        }
+        if (orderFilter === "Nombre") {
+            return a.name.localeCompare(b.name);
+        }
+        return 0;
+    });
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
             {/* FORMULARIO DE BÚSQUEDA */}
             <View style={styles.formContainer}>
                 <View style={styles.section}>
-                    <Text style={styles.label}>1. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
-                    <View style={styles.searchContainer}>
-                        <Ionicons name="car-outline" size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput style={styles.searchInput} placeholder="Ej: Ford Focus 2015..." placeholderTextColor="#94a3b8" value={vehicleQuery} onChangeText={setVehicleQuery} />
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.label}>2. ¿Qué herramienta necesitas?</Text>
+                    <Text style={styles.label}>1. ¿Qué herramienta necesitas?</Text>
                     <View style={styles.searchContainer}>
                         <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                         <TextInput style={styles.searchInput} placeholder="Ej: Llave dinamométrica..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
@@ -58,7 +78,7 @@ export default function Herramientas() {
             {hasSearched && (
                 <View style={styles.resultsContainer}>
                     <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
-                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {vehicleQuery}</Text>
+                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas recomendadas</Text>
 
                     {/* FILTROS */}
                     <View style={styles.filtersWrapper}>
@@ -80,7 +100,7 @@ export default function Herramientas() {
 
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        {MOCK_RESULTS.map((item) => (
+                        {sortedResults.map((item) => (
                             <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.store)}>
                                 <Image source={{ uri: item.image }} style={styles.resultImage} />
                                 <View style={styles.resultInfo}>

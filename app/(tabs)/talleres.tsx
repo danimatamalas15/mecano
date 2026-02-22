@@ -1,21 +1,74 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from 'expo-location';
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type TallerType = "Mecánica" | "Chapa" | "Electrónica" | "Neumáticos";
 
 // Mock Data
+// Coordenadas fijas de Madrid centro para las pruebas: 40.4168, -3.7038
 const MOCK_TALLERES = [
-    { id: "1", name: "Taller Mecánico Hermanos Ruiz", address: "Calle Mayor 12, Madrid", distance: "1.2 km", rating: "4.9", reviews: 154, type: "Mecánica" },
-    { id: "2", name: "Auto Repuestos Motor Express", address: "Avenida de América 45, Madrid", distance: "2.5 km", rating: "4.5", reviews: 89, type: "Mecánica" },
-    { id: "3", name: "Servicio Oficial Bosch Service", address: "Calle de Alcalá 120, Madrid", distance: "3.1 km", rating: "4.2", reviews: 312, type: "Electrónica" }
+    { id: "1", name: "Taller Mecánico Hermanos Ruiz", address: "Calle Mayor 12, Madrid", lat: 40.4150, lon: -3.7040, rating: "4.9", reviews: 154, type: "Mecánica" },
+    { id: "2", name: "Auto Repuestos Motor Express", address: "Avenida de América 45, Madrid", lat: 40.4380, lon: -3.6760, rating: "4.5", reviews: 89, type: "Mecánica" },
+    { id: "3", name: "Servicio Oficial Bosch Service", address: "Calle de Alcalá 120, Madrid", lat: 40.4250, lon: -3.6700, rating: "4.2", reviews: 312, type: "Electrónica" },
+    { id: "4", name: "Neumáticos Cibeles", address: "Plaza de Cibeles, Madrid", lat: 40.4193, lon: -3.6930, rating: "4.8", reviews: 201, type: "Neumáticos" },
+    { id: "5", name: "Chapa y Pintura El Retiro", address: "Av. Menéndez Pelayo, Madrid", lat: 40.4110, lon: -3.6780, rating: "4.1", reviews: 54, type: "Chapa" }
 ];
+
+// Fórmula Haversine para calcular distancia en km entre dos coordenadas
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
 
 export default function Talleres() {
     const [tallerType, setTallerType] = useState<TallerType | null>(null);
     const [locationType, setLocationType] = useState<"Auto" | "Manual" | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
     const [orderFilter, setOrderFilter] = useState<"Proximidad" | "Calificación en Google">("Proximidad");
+
+    const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [locationError, setLocationError] = useState("");
+
+    const getLocation = async () => {
+        setIsLoadingLocation(true);
+        setLocationError("");
+        setHasSearched(false);
+
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setLocationError("Permiso de ubicación denegado. Prueba con búsqueda manual.");
+                setIsLoadingLocation(false);
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            setUserLocation({ lat: location.coords.latitude, lon: location.coords.longitude });
+            setLocationType("Auto");
+            setHasSearched(true);
+        } catch (error) {
+            setLocationError("No se pudo obtener la ubicación actual.");
+        } finally {
+            setIsLoadingLocation(false);
+        }
+    };
+
+    const handleSearch = () => {
+        if (locationType === "Auto" && !userLocation) {
+            getLocation();
+        } else {
+            setHasSearched(true);
+        }
+    };
 
     const TALLERES: { type: TallerType; icon: any }[] = [
         { type: "Mecánica", icon: "hardware-chip-outline" },
@@ -54,8 +107,12 @@ export default function Talleres() {
                 <View style={styles.section}>
                     <Text style={styles.label}>2. Ubicación</Text>
                     <View style={styles.row}>
-                        <TouchableOpacity style={[styles.typeButton, locationType === "Auto" && styles.typeButtonActive]} onPress={() => setLocationType("Auto")}>
-                            <Ionicons name="location" size={24} color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
+                        <TouchableOpacity style={[styles.typeButton, locationType === "Auto" && styles.typeButtonActive]} onPress={getLocation}>
+                            {isLoadingLocation ? (
+                                <ActivityIndicator size="small" color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
+                            ) : (
+                                <Ionicons name="location" size={24} color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
+                            )}
                             <Text style={[styles.typeButtonText, locationType === "Auto" && styles.typeTextActive]}>Ubicación Actual</Text>
                         </TouchableOpacity>
 
@@ -75,7 +132,9 @@ export default function Talleres() {
                     </View>
                 )}
 
-                <TouchableOpacity style={styles.submitButton} onPress={() => setHasSearched(true)}>
+                {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
+
+                <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
                     <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
                     <Text style={styles.submitButtonText}>BUSCAR TALLERES</Text>
                 </TouchableOpacity>
@@ -104,32 +163,56 @@ export default function Talleres() {
 
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        {MOCK_TALLERES.map((item) => (
-                            <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => handleOpenMap(item.address)}>
-                                <View style={styles.iconContainer}>
-                                    <Ionicons name="car-sport" size={28} color="#ef4444" />
-                                </View>
-                                <View style={styles.resultInfo}>
-                                    <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
-                                    <Text style={styles.resultAddress} numberOfLines={1}>{item.address}</Text>
+                        {
+                            MOCK_TALLERES
+                                .map((taller) => {
+                                    // Calcular distancia si tenemos la del usuario, de lo contrario usar un default para la demo
+                                    let distKm = 0;
+                                    if (userLocation) {
+                                        distKm = calculateDistance(userLocation.lat, userLocation.lon, taller.lat, taller.lon);
+                                    } else {
+                                        // Fake default distance if manual search
+                                        distKm = Math.random() * 5 + 1;
+                                    }
+                                    return { ...taller, distValue: distKm, distanceText: distKm.toFixed(1) + " km" };
+                                })
+                                // Filtrar por tipo (si seleccionó uno)
+                                .filter(t => tallerType ? t.type === tallerType : true)
+                                // Ordenar
+                                .sort((a, b) => {
+                                    if (orderFilter === "Proximidad") {
+                                        return a.distValue - b.distValue;
+                                    } else {
+                                        return parseFloat(b.rating) - parseFloat(a.rating);
+                                    }
+                                })
+                                .map((item) => (
+                                    <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => handleOpenMap(item.address)}>
+                                        <View style={styles.iconContainer}>
+                                            <Ionicons name="car-sport" size={28} color="#ef4444" />
+                                        </View>
+                                        <View style={styles.resultInfo}>
+                                            <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
+                                            <Text style={styles.resultAddress} numberOfLines={1}>{item.address}</Text>
 
-                                    <View style={styles.metaRow}>
-                                        <View style={styles.distanceBadge}>
-                                            <Ionicons name="location" size={12} color="#0284c7" />
-                                            <Text style={styles.distanceText}>{item.distance}</Text>
+                                            <View style={styles.metaRow}>
+                                                <View style={styles.distanceBadge}>
+                                                    <Ionicons name="location" size={12} color="#0284c7" />
+                                                    <Text style={styles.distanceText}>{item.distanceText}</Text>
+                                                </View>
+                                                <View style={styles.ratingBox}>
+                                                    <Ionicons name="star" size={12} color="#f59e0b" />
+                                                    <Text style={styles.ratingText}>{item.rating} </Text>
+                                                    <Text style={styles.reviewsText}>({item.reviews})</Text>
+                                                </View>
+                                            </View>
                                         </View>
-                                        <View style={styles.ratingBox}>
-                                            <Ionicons name="star" size={12} color="#f59e0b" />
-                                            <Text style={styles.ratingText}>{item.rating} </Text>
-                                            <Text style={styles.reviewsText}>({item.reviews})</Text>
+                                        <View style={styles.chevronBox}>
+                                            <Ionicons name="navigate-circle-outline" size={28} color="#3b82f6" />
                                         </View>
-                                    </View>
-                                </View>
-                                <View style={styles.chevronBox}>
-                                    <Ionicons name="navigate-circle-outline" size={28} color="#3b82f6" />
-                                </View>
-                            </TouchableOpacity>
-                        ))}
+                                    </TouchableOpacity>
+                                ))
+                        }
                     </View>
                 </View>
             )}
@@ -173,6 +256,7 @@ const styles = StyleSheet.create({
         flexDirection: "row", justifyContent: "center"
     },
     submitButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+    errorText: { color: "#dc2626", fontSize: 13, marginTop: 4, marginBottom: 8, textAlign: "center" },
 
     // Results
     resultsContainer: { borderTopWidth: 2, borderTopColor: "#e2e8f0", paddingTop: 20 },

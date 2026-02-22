@@ -1,14 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
-
-// Mock Data
-const MOCK_VIDEOS = [
-    { id: "1", title: "Cómo identificar fallos de encendido", views: "1.2M visualizaciones", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=200", lang: "Español" },
-    { id: "2", title: "Engine Misfire Diagnosis (Subtítulos en Español)", views: "850K visualizaciones", image: "https://images.unsplash.com/photo-1542282088-fe8426682b8f?q=80&w=200", lang: "Inglés - Auto Traducido" },
-    { id: "3", title: "Limpieza de inyectores paso a paso", views: "500K visualizaciones", image: "https://images.unsplash.com/photo-1530906358829-e84b2769270f?q=80&w=200", lang: "Español" }
-];
 
 const MOCK_FORUMS = [
     { id: "1", title: "Solucionado: Check Engine parpadea al acelerar", source: "ForoMecanicos.com", date: "Hace 2 semanas", lang: "Español" },
@@ -25,6 +18,23 @@ export default function Diagnostico() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [aiResponse, setAiResponse] = useState<string[]>([]);
+    const [mockVideos, setMockVideos] = useState<any[]>([]);
+
+    const generateMockVideos = (query: string, symptom: string) => {
+        return Array.from({ length: 20 }).map((_, i) => ({
+            id: String(i + 1),
+            title: `Solución paso a paso: ${symptom.substring(0, 20)}... en ${query || 'tu vehículo'} - Video ${i + 1}`,
+            views: `${Math.floor(Math.random() * 900) + 10}K visualizaciones`,
+            image: [
+                "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=200",
+                "https://images.unsplash.com/photo-1542282088-fe8426682b8f?q=80&w=200",
+                "https://images.unsplash.com/photo-1530906358829-e84b2769270f?q=80&w=200",
+                "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=200"
+            ][i % 4],
+            lang: i % 3 === 0 ? "Inglés - Auto Traducido" : "Español",
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + " " + symptom)}`
+        }));
+    };
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !symptoms.trim()) {
@@ -37,14 +47,19 @@ export default function Diagnostico() {
         setShowForums(false);
 
         try {
-            const prompt = `Eres un mecánico experto en diagnóstico automotriz (IA avanzada). 
+            const prompt = `Eres un mecánico experto en diagnóstico automotriz avanzado. 
 El vehículo es un: ${vehicleType === 'Moto' ? 'Motocicleta' : 'Automóvil'} - ${searchQuery}
 Los síntomas descritos son: ${symptoms}
 
-Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóstico general, seguido de una pequeña lista de 3 viñetas separadas por saltos de línea con las fallas más probables y cómo detectarlas. Sé preciso, técnico pero entendible y NO uses negritas/asteriscos de markdown.`;
+Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto con los síntomas descritos. Proporciona un diagnóstico exhaustivo y sumamente detallado. Tu respuesta debe incluir:
+1. Una introducción técnica profundizando en cómo interactúan los sistemas posiblemente afectados en este modelo específico.
+2. Un listado extenso (mínimo 5 viñetas) de las causas raíz más probables, detalladas a nivel técnico y ordenadas por probabilidad.
+3. Pasos de comprobación y pruebas específicas recomendadas para descartar cada causa.
+Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
             const result = await fetchChatGPTResponse(prompt);
             setAiResponse(result);
+            setMockVideos(generateMockVideos(searchQuery, symptoms));
             setHasSearched(true);
         } catch (error) {
             console.error("Error en diagnostico:", error);
@@ -56,8 +71,7 @@ Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóst
     };
 
     const openLink = (url: string) => {
-        // Simulated external app opening
-        alert(`Abriendo navegador externo/YouTube:\n${url}`);
+        Linking.openURL(url).catch((err) => console.error("Error abriendo URL: ", err));
     };
 
     return (
@@ -169,12 +183,12 @@ Comporta tu respuesta devolviendo: un primer párrafo introductorio de diagnóst
 
                                 {/* YOUTUBE VIDEOS */}
                                 <View style={styles.videosSection}>
-                                    <Text style={styles.sectionSubtitle}>Vídeos de YouTube Relacionados</Text>
-                                    {MOCK_VIDEOS.map(video => (
+                                    <Text style={styles.sectionSubtitle}>20 Vídeos de YouTube Relacionados a tu consulta</Text>
+                                    {mockVideos.map(video => (
                                         <TouchableOpacity
                                             key={video.id}
                                             style={styles.videoCard}
-                                            onPress={() => openLink(`https://youtube.com/watch?v=mock_video_${video.id}`)}
+                                            onPress={() => openLink(video.url)}
                                         >
                                             <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
                                             <View style={styles.videoInfo}>
