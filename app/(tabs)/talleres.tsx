@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from 'expo-location';
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type TallerType = "Mecánica" | "Chapa" | "Electrónica" | "Neumáticos";
 
@@ -35,20 +35,27 @@ export default function Talleres() {
 
     const generateMockTalleres = (centerLat: number, centerLon: number, typeFilter: TallerType | null) => {
         const types: TallerType[] = ["Mecánica", "Chapa", "Electrónica", "Neumáticos"];
+        const realNames = ["Talleres Paco", "Midas", "Norauto", "Feuvert", "Bosch Car Service", "Talleres Hermanos García", "MotorTown", "Automecánica Integral", "First Stop", "Confortauto"];
+
         return Array.from({ length: 50 }).map((_, i) => {
             const r = 0.2; // ~20km de dispersión
             const latOffset = (Math.random() - 0.5) * r;
             const lonOffset = (Math.random() - 0.5) * r;
             const tType = typeFilter || types[i % types.length];
+            const baseName = realNames[i % realNames.length];
+            const finalName = `${baseName} - Especialistas en ${tType} ${i + 1}`;
+            const ratingValue = (Math.random() * 2 + 3).toFixed(1);
+
             return {
                 id: String(i + 1),
-                name: `Taller de ${tType} ${["Avanzado", "Rápido", "Pro", "Especializado", "Center"][i % 5]} ${i + 1}`,
-                address: `Centro de reparaciones a ${(Math.random() * 20).toFixed(1)} km del centro`,
+                name: finalName,
+                address: `Centro de reparaciones a ${(Math.random() * 20).toFixed(1)} km`,
                 lat: centerLat + latOffset,
                 lon: centerLon + lonOffset,
-                rating: (Math.random() * 2 + 3).toFixed(1),
+                rating: ratingValue,
                 reviews: Math.floor(Math.random() * 300) + 10,
-                type: tType
+                type: tType,
+                url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(finalName)}`
             };
         });
     };
@@ -117,8 +124,24 @@ export default function Talleres() {
         { type: "Neumáticos", icon: "disc-outline" },
     ];
 
-    const handleOpenMap = (address: string) => {
-        alert(`Abriendo Google Maps en:\n${address}`);
+    const handleOpenMap = (url: string) => {
+        Linking.openURL(url).catch(err => console.error("Error al abrir mapa", err));
+    };
+
+    const StarRating = ({ rating }: { rating: string }) => {
+        const numRating = parseFloat(rating);
+        return (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <Ionicons
+                        key={star}
+                        name={star <= numRating ? "star" : star - 0.5 <= numRating ? "star-half" : "star-outline"}
+                        size={12}
+                        color="#f59e0b"
+                    />
+                ))}
+            </View>
+        );
     };
 
     return (
@@ -224,12 +247,12 @@ export default function Talleres() {
                                     }
                                 })
                                 .map((item) => (
-                                    <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => handleOpenMap(item.address)}>
+                                    <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => handleOpenMap(item.url)}>
                                         <View style={styles.iconContainer}>
                                             <Ionicons name="car-sport" size={28} color="#ef4444" />
                                         </View>
                                         <View style={styles.resultInfo}>
-                                            <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
+                                            <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
                                             <Text style={styles.resultAddress} numberOfLines={1}>{item.address}</Text>
 
                                             <View style={styles.metaRow}>
@@ -238,8 +261,8 @@ export default function Talleres() {
                                                     <Text style={styles.distanceText}>{item.distanceText}</Text>
                                                 </View>
                                                 <View style={styles.ratingBox}>
-                                                    <Ionicons name="star" size={12} color="#f59e0b" />
                                                     <Text style={styles.ratingText}>{item.rating} </Text>
+                                                    <StarRating rating={item.rating} />
                                                     <Text style={styles.reviewsText}>({item.reviews})</Text>
                                                 </View>
                                             </View>
