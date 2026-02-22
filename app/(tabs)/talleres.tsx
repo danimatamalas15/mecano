@@ -21,6 +21,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 export default function Talleres() {
+
     const [tallerType, setTallerType] = useState<TallerType | null>(null);
     const [locationType, setLocationType] = useState<"Auto" | "Manual" | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
