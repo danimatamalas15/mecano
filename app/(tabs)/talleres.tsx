@@ -38,7 +38,9 @@ export default function Talleres() {
         const realNames = ["Talleres Paco", "Midas", "Norauto", "Feuvert", "Bosch Car Service", "Talleres Hermanos García", "MotorTown", "Automecánica Integral", "First Stop", "Confortauto"];
 
         return Array.from({ length: 50 }).map((_, i) => {
-            const r = 0.2; // ~20km de dispersión
+            // Mitad de los talleres (25) estarán a menos de 2 km, y los otros dispersos más lejos
+            const isNear = i < 25;
+            const r = isNear ? 0.015 : 0.08; // 0.015 grados = ~1.6km | 0.08 = ~9km de radio 
             const latOffset = (Math.random() - 0.5) * r;
             const lonOffset = (Math.random() - 0.5) * r;
             const tType = typeFilter || types[i % types.length];
@@ -49,7 +51,7 @@ export default function Talleres() {
             return {
                 id: String(i + 1),
                 name: finalName,
-                address: `Centro de reparaciones a ${(Math.random() * 20).toFixed(1)} km`,
+                address: `Calle Ficticia del Motor ${i + 1}`,
                 lat: centerLat + latOffset,
                 lon: centerLon + lonOffset,
                 rating: ratingValue,
