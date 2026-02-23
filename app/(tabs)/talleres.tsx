@@ -72,21 +72,24 @@ export default function Talleres() {
                             center = { lat: pos.coords.latitude, lon: pos.coords.longitude };
                             setUserLocation(center);
                         } catch (err: any) {
-                            setLocationError("El usuario denegó el permiso o hubo un error: " + err.message);
-                            setIsLoadingLocation(false);
-                            return;
+                            console.warn("No se pudo obtener la ubicación real (Web), usando Palma de Mallorca por defecto.", err);
+                            // Ponemos coordenadas de respaldo (Palma de Mallorca)
+                            center = { lat: 39.5696, lon: 2.6502 };
+                            setUserLocation(center);
+                            setLocationError("No se pudo obtener ubicación real. Usando Palma de Mallorca por defecto.");
                         }
                     } else {
                         const { status } = await Location.requestForegroundPermissionsAsync();
                         if (status !== 'granted') {
-                            setLocationError("Permiso de ubicación denegado. Prueba con búsqueda manual.");
-                            setIsLoadingLocation(false);
-                            return;
+                            console.warn("Permiso denegado (App), usando Palma de Mallorca por defecto.");
+                            center = { lat: 39.5696, lon: 2.6502 };
+                            setUserLocation(center);
+                            setLocationError("Permiso de GPS denegado. Usando Palma de Mallorca por defecto.");
+                        } else {
+                            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+                            center = { lat: location.coords.latitude, lon: location.coords.longitude };
+                            setUserLocation(center);
                         }
-
-                        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-                        center = { lat: location.coords.latitude, lon: location.coords.longitude };
-                        setUserLocation(center);
                     }
                 } else {
                     center = userLocation;
