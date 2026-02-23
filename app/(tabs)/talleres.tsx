@@ -73,11 +73,29 @@ export default function Talleres() {
                     setIsLoadingLocation(false);
                     return;
                 }
-                const geocodeResults = await Location.geocodeAsync(manualAddress);
-                if (geocodeResults.length > 0) {
-                    center = { lat: geocodeResults[0].latitude, lon: geocodeResults[0].longitude };
-                } else {
-                    setLocationError("No pudimos encontrar esa dirección. Sé más específico.");
+                try {
+                    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                    const geocodeUrl = `${baseUrl}/api/geocode?address=${encodeURIComponent(manualAddress)}`;
+
+                    const response = await fetch(geocodeUrl);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        setLocationError(data.error || "No pudimos encontrar esa dirección. Sé más específico.");
+                        setIsLoadingLocation(false);
+                        return;
+                    }
+
+                    if (data.lat && data.lng) {
+                        center = { lat: data.lat, lon: data.lng };
+                    } else {
+                        setLocationError("No pudimos encontrar esa dirección. Sé más específico.");
+                        setIsLoadingLocation(false);
+                        return;
+                    }
+                } catch (geocodeError) {
+                    console.error("Fallo al resolver dirección manual:", geocodeError);
+                    setLocationError("Error de conexión al buscar la dirección.");
                     setIsLoadingLocation(false);
                     return;
                 }
