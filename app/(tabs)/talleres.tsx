@@ -38,20 +38,23 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 export default function Talleres() {
 
     const [tallerType, setTallerType] = useState<TallerType | null>(null);
-    const [locationType, setLocationType] = useState<"Auto" | "Manual" | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
     const [orderFilter, setOrderFilter] = useState<"Proximidad" | "Calificación en Google">("Proximidad");
 
     const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [locationError, setLocationError] = useState("");
+
+    // Fallback Manual States
+    const [showManualFallback, setShowManualFallback] = useState(false);
     const [manualAddress, setManualAddress] = useState("");
+
     const [searchCenter, setSearchCenter] = useState<{ lat: number, lon: number } | null>(null);
     const [mockResults, setMockResults] = useState<any[]>([]);
 
     const handleSearch = async () => {
-        if (!locationType) {
-            alert("Por favor, selecciona el método de ubicación.");
+        if (!tallerType) {
+            alert("Por favor, selecciona qué tipo de taller buscas.");
             return;
         }
 
@@ -63,7 +66,24 @@ export default function Talleres() {
         let isFakeISPLocation = false;
 
         try {
-            if (locationType === "Auto") {
+            // Si ya estamos en modo fallback manual, intentamos usar Geocoding
+            if (showManualFallback) {
+                if (!manualAddress.trim()) {
+                    setLocationError("Por favor, introduce tu código postal, ciudad o calle.");
+                    setIsLoadingLocation(false);
+                    return;
+                }
+                const geocodeResults = await Location.geocodeAsync(manualAddress);
+                if (geocodeResults.length > 0) {
+                    center = { lat: geocodeResults[0].latitude, lon: geocodeResults[0].longitude };
+                } else {
+                    setLocationError("No pudimos encontrar esa dirección. Sé más específico.");
+                    setIsLoadingLocation(false);
+                    return;
+                }
+            }
+            // Si es intento automático via GPS
+            else {
                 if (!userLocation) {
                     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
                         try {
@@ -78,59 +98,46 @@ export default function Talleres() {
                                     }
                                 );
                             });
-                            center = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+
+                            const detectedLat = pos.coords.latitude;
+                            const detectedLon = pos.coords.longitude;
+
+                            if (Math.abs(detectedLat - 40.41) < 0.2 && Math.abs(detectedLon - -3.70) < 0.2) {
+                                isFakeISPLocation = true;
+                                throw new Error("Falso positivo detectado.");
+                            }
+
+                            center = { lat: detectedLat, lon: detectedLon };
                             setUserLocation(center);
                         } catch (err: any) {
-                            console.warn("Fallo GPS Web, intentando geolocalizar por IP...", err);
-                            try {
-                                // Intento 2: Geolocalizar por IP de internet (Ideal para PCs de sobremesa conectados por Router/Cable)
-                                const ipResponse = await fetch('https://ipapi.co/json/');
-                                const ipData = await ipResponse.json();
-
-                                if (ipData.latitude && ipData.longitude) {
-                                    center = { lat: ipData.latitude, lon: ipData.longitude };
-                                    setUserLocation(center);
-                                    setLocationError(`[Nota]: Ubicación aproximada por IP (${ipData.city || 'Desconocida'}).`);
-                                } else {
-                                    throw new Error("Datos IP de geolocalización inválidos.");
-                                }
-                            } catch (ipErr: any) {
-                                console.warn("Fallo geolocalización IP, usando Palma de Mallorca por defecto.", ipErr);
-                                // Intento 3: Coordenadas de respaldo absoluto (Palma de Mallorca)
-                                center = { lat: 39.5696, lon: 2.6502 };
-                                setUserLocation(center);
-                                setLocationError("No se pudo obtener ubicación por GPS ni IP. Usando Palma de Mallorca.");
-                            }
+                            console.warn("Fallo GPS Web o Falso Positivo detectado. Activando Fallback Manual.", err.message);
+                            setShowManualFallback(true);
+                            setLocationError("No hemos podido detectar tu ubicación exacta. Introduce tu código postal o ciudad.");
+                            setIsLoadingLocation(false);
+                            return; // Damos tiempo al usuario a escribir
                         }
                     } else {
                         const { status } = await Location.requestForegroundPermissionsAsync();
                         if (status !== 'granted') {
-                            console.warn("Permiso denegado (App), usando Palma de Mallorca por defecto.");
-                            center = { lat: 39.5696, lon: 2.6502 };
-                            setUserLocation(center);
-                            setLocationError("Permiso de GPS denegado. Usando Palma de Mallorca por defecto.");
+                            setShowManualFallback(true);
+                            setLocationError("Permiso de GPS denegado. Introduce tu dirección manualmente.");
+                            setIsLoadingLocation(false);
+                            return;
                         } else {
-                            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-                            center = { lat: location.coords.latitude, lon: location.coords.longitude };
-                            setUserLocation(center);
+                            try {
+                                const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+                                center = { lat: location.coords.latitude, lon: location.coords.longitude };
+                                setUserLocation(center);
+                            } catch (e: any) {
+                                setShowManualFallback(true);
+                                setLocationError("Fallo interno del GPS nativo. Introduce tu dirección manualmente.");
+                                setIsLoadingLocation(false);
+                                return;
+                            }
                         }
                     }
                 } else {
                     center = userLocation;
-                }
-            } else if (locationType === "Manual") {
-                if (!manualAddress.trim()) {
-                    setLocationError("Por favor, introduce una dirección válida para buscar.");
-                    setIsLoadingLocation(false);
-                    return;
-                }
-                const geocodeResults = await Location.geocodeAsync(manualAddress);
-                if (geocodeResults.length > 0) {
-                    center = { lat: geocodeResults[0].latitude, lon: geocodeResults[0].longitude };
-                } else {
-                    setLocationError("No pudimos encontrar esa dirección. Sé más específico.");
-                    setIsLoadingLocation(false);
-                    return;
                 }
             }
 
@@ -227,28 +234,13 @@ export default function Talleres() {
 
                 <View style={styles.divider} />
 
-                <View style={styles.section}>
-                    <Text style={styles.label}>2. Ubicación</Text>
-                    <View style={styles.row}>
-                        <TouchableOpacity style={[styles.typeButton, locationType === "Auto" && styles.typeButtonActive]} onPress={() => setLocationType("Auto")}>
-                            <Ionicons name="location" size={24} color={locationType === "Auto" ? "#fff" : "#3b82f6"} />
-                            <Text style={[styles.typeButtonText, locationType === "Auto" && styles.typeTextActive]}>Ubicación Actual</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={[styles.typeButton, locationType === "Manual" && styles.typeButtonActive]} onPress={() => setLocationType("Manual")}>
-                            <Ionicons name="map" size={24} color={locationType === "Manual" ? "#fff" : "#3b82f6"} />
-                            <Text style={[styles.typeButtonText, locationType === "Manual" && styles.typeTextActive]}>Dirección Manual</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {locationType === "Manual" && (
+                {showManualFallback && (
                     <View style={styles.section}>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                             <TextInput
                                 style={styles.searchInput}
-                                placeholder="Ej: Madrid, Calle Mayor 12..."
+                                placeholder="Ej: Palma de Mallorca, CP 07001..."
                                 placeholderTextColor="#94a3b8"
                                 value={manualAddress}
                                 onChangeText={setManualAddress}
