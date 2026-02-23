@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
+import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 
 const MOCK_FORUMS = [
     { id: "1", title: "Solucionado: Check Engine parpadea al acelerar", source: "ForoMecanicos.com", date: "Hace 2 semanas", lang: "Español" },
@@ -18,23 +19,9 @@ export default function Diagnostico() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [aiResponse, setAiResponse] = useState<string[]>([]);
-    const [mockVideos, setMockVideos] = useState<any[]>([]);
+    const [mockVideos, setMockVideos] = useState<YouTubeVideo[]>([]);
 
-    const generateMockVideos = (query: string, symptom: string) => {
-        return Array.from({ length: 20 }).map((_, i) => ({
-            id: String(i + 1),
-            title: `Solución paso a paso: ${symptom.substring(0, 20)}... en ${query || 'tu vehículo'} - Video ${i + 1}`,
-            views: `${Math.floor(Math.random() * 900) + 10}K visualizaciones`,
-            image: [
-                "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=200",
-                "https://images.unsplash.com/photo-1542282088-fe8426682b8f?q=80&w=200",
-                "https://images.unsplash.com/photo-1530906358829-e84b2769270f?q=80&w=200",
-                "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=200"
-            ][i % 4],
-            lang: i % 3 === 0 ? "Inglés - Auto Traducido" : "Español",
-            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + " " + symptom)}`
-        }));
-    };
+    // const generateMockVideos ... borrado
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !symptoms.trim()) {
@@ -57,9 +44,13 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 3. Pasos de comprobación y pruebas específicas recomendadas para descartar cada causa.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
-            const result = await fetchChatGPTResponse(prompt);
+            const [result, videosData] = await Promise.all([
+                fetchChatGPTResponse(prompt),
+                fetchYouTubeVideos(`Diagnóstico ${searchQuery} ${symptoms}`)
+            ]);
+
             setAiResponse(result);
-            setMockVideos(generateMockVideos(searchQuery, symptoms));
+            setMockVideos(videosData);
             setHasSearched(true);
         } catch (error) {
             console.error("Error en diagnostico:", error);

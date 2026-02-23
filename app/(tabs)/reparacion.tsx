@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
+import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 
 const MOCK_FORUMS = [
     { id: "1", title: "Guía definitiva: Mantenimiento básico para principiantes", source: "TuMecanico.es", date: "Hace 1 semana", lang: "Español" },
@@ -16,23 +17,9 @@ export default function Reparacion() {
     const [showForums, setShowForums] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [aiResponse, setAiResponse] = useState<string[]>([]);
-    const [mockVideos, setMockVideos] = useState<any[]>([]);
+    const [mockVideos, setMockVideos] = useState<YouTubeVideo[]>([]);
 
-    const generateMockVideos = (query: string, repair: string) => {
-        return Array.from({ length: 20 }).map((_, i) => ({
-            id: String(i + 1),
-            title: `Guía Definitiva: ${repair.substring(0, 20)}... en ${query || 'tu vehículo'} - Parte ${i + 1}`,
-            views: `${Math.floor(Math.random() * 900) + 10}K visualizaciones`,
-            image: [
-                "https://images.unsplash.com/photo-1596765792226-e17ebfe6af94?q=80&w=200",
-                "https://images.unsplash.com/photo-1625067204646-7c0134dddfa3?q=80&w=200",
-                "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?q=80&w=200",
-                "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=200"
-            ][i % 4],
-            lang: i % 3 === 0 ? "Inglés - Auto Traducido" : "Español",
-            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + " " + repair)}`
-        }));
-    };
+    // const generateMockVideos ... borrado
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !repairQuery.trim()) {
@@ -55,9 +42,13 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo y la 
 3. Consejos de seguridad y prevenciones de errores comunes durante el desmontaje y ensamblaje.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-) o números (1., 2., ...).`;
 
-            const result = await fetchChatGPTResponse(prompt);
+            const [result, videosData] = await Promise.all([
+                fetchChatGPTResponse(prompt),
+                fetchYouTubeVideos(`Reparar ${searchQuery} ${repairQuery}`)
+            ]);
+
             setAiResponse(result);
-            setMockVideos(generateMockVideos(searchQuery, repairQuery));
+            setMockVideos(videosData);
             setHasSearched(true);
         } catch (error) {
             console.error("Error en reparacion:", error);
