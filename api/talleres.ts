@@ -24,14 +24,14 @@ export default async function handler(request: Request) {
         });
     }
 
-    let keyword = 'taller mecanico';
-    if (tipo === 'Chapa') keyword = 'taller chapa y pintura';
-    else if (tipo === 'Electrónica') keyword = 'taller electricidad automovil';
-    else if (tipo === 'Neumáticos') keyword = 'taller neumaticos';
+    let keyword = 'mecanico';
+    if (tipo === 'Chapa') keyword = 'chapa y pintura';
+    else if (tipo === 'Electrónica') keyword = 'electricidad automovil';
+    else if (tipo === 'Neumáticos') keyword = 'neumaticos';
 
-    const radio = 5000;
+    const radio = 8000;
 
-    const googleUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radio}&type=car_repair&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
+    const googleUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radio}&keyword=${encodeURIComponent('taller ' + keyword)}&key=${apiKey}`;
 
     try {
         const response = await fetch(googleUrl);
