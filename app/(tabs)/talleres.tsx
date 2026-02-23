@@ -67,7 +67,11 @@ export default function Talleres() {
                     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
                         try {
                             const pos: any = await new Promise((resolve, reject) => {
-                                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+                                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                                    enableHighAccuracy: false, // En PC, forzar "true" hace que la petición se quede congelada buscando una antena GPS que no existe
+                                    timeout: 10000,            // Si en 10 segundos no responde, salta al error (fallback a Palma)
+                                    maximumAge: 300000         // Permite usar una ubicación de red en caché de hasta 5 minutos
+                                });
                             });
                             center = { lat: pos.coords.latitude, lon: pos.coords.longitude };
                             setUserLocation(center);
