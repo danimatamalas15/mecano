@@ -117,32 +117,44 @@ export default function Talleres() {
 
                     const response = await fetch(apiUrl);
 
+                    // Volcado manual del contenido en bruto de la petición si no es OK (Debug)
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        try {
+                            const errorJson = await response.json();
+                            throw new Error(`Error Servidor ${response.status}: ` + (errorJson.error || errorJson.details || JSON.stringify(errorJson)));
+                        } catch (e: any) {
+                            if (e.message.includes('Error Servidor')) throw e; // Ya tiene parseado el backend custom error
+                            throw new Error(`Fallo Servidor HTTP ${response.status}: ${response.statusText}`);
+                        }
                     }
 
                     const data = await response.json();
 
                     if (response.ok && Array.isArray(data)) {
-                        const mappedResults = data.map((place: any, index: number) => ({
-                            id: place.place_id || String(index),
-                            name: place.name,
-                            address: place.vicinity || place.formatted_address || "Dirección no disponible",
-                            lat: place.geometry?.location?.lat || currentCenter.lat,
-                            lon: place.geometry?.location?.lng || currentCenter.lon,
-                            rating: place.rating ? place.rating.toFixed(1) : "N/A",
-                            reviews: place.user_ratings_total || 0,
-                            type: tallerType || "Mecánica",
-                            url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`
-                        }));
-                        setMockResults(mappedResults);
+                        if (data.length === 0) {
+                            setLocationError("Búsqueda exitosa, pero Google Places dice que no hay ningún taller en 8km a la redonda.");
+                            setMockResults([]);
+                        } else {
+                            const mappedResults = data.map((place: any, index: number) => ({
+                                id: place.place_id || String(index),
+                                name: place.name,
+                                address: place.vicinity || place.formatted_address || "Dirección no disponible",
+                                lat: place.geometry?.location?.lat || currentCenter.lat,
+                                lon: place.geometry?.location?.lng || currentCenter.lon,
+                                rating: place.rating ? place.rating.toFixed(1) : "N/A",
+                                reviews: place.user_ratings_total || 0,
+                                type: tallerType || "Mecánica",
+                                url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`
+                            }));
+                            setMockResults(mappedResults);
+                        }
                     } else {
                         setMockResults([]);
-                        setLocationError(data.error || "No se encontraron talleres.");
+                        setLocationError(data.error ? `Error Servidor: ${data.error} - ${data.details || ''}` : "Formato de resultados desconocido.");
                     }
                 } catch (error: any) {
                     console.error("Error fetching talleres:", error);
-                    setLocationError(`Fallo de conexión: ${error.message || "Error al contactar con el servidor."}`);
+                    setLocationError(`[DEPURACIÓN]: ${error.message || "Error de Red o CORS al contactar Vercel."}`);
                 }
                 setOrderFilter("Proximidad");
                 setHasSearched(true);

@@ -50,6 +50,13 @@ export default async function handler(request: Request) {
         const response = await fetch(googleUrl);
         const data = await response.json();
 
+        if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+            return new Response(JSON.stringify({ error: `Google Places API status: ${data.status}`, details: data.error_message || '' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
+        }
+
         return new Response(JSON.stringify(data.results || []), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },

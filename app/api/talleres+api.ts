@@ -1,3 +1,16 @@
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+    return new Response(null, {
+        status: 204,
+        headers: corsHeaders
+    });
+}
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const lat = searchParams.get('lat');
@@ -7,7 +20,7 @@ export async function GET(request: Request) {
     if (!lat || !lng) {
         return new Response(JSON.stringify({ error: 'Faltan coordenadas' }), {
             status: 400,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }
 
@@ -16,7 +29,7 @@ export async function GET(request: Request) {
     if (!apiKey) {
         return new Response(JSON.stringify({ error: 'API Key de Google Maps no configurada en el backend' }), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }
 
@@ -35,14 +48,21 @@ export async function GET(request: Request) {
         const response = await fetch(googleUrl);
         const data = await response.json();
 
+        if (data.status !== "OK") {
+            return new Response(JSON.stringify({ error: `Google Places API status: ${data.status}`, details: data.error_message || '' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
+        }
+
         return new Response(JSON.stringify(data.results || []), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     } catch (error) {
         return new Response(JSON.stringify({ error: 'Error al contactar con Google Maps', details: String(error) }), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }
 }
