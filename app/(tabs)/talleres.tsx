@@ -68,25 +68,13 @@ export default function Talleres() {
                     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
                         try {
                             const pos: any = await new Promise((resolve, reject) => {
-                                // Envolvemos en un timeout manual porque los navegadores en PC por cable 
-                                // a veces ignoran los timeouts nativos si no tienen hardware Wi-Fi/GPS con el que comunicarse.
-                                const manualTimeout = setTimeout(() => {
-                                    reject(new Error("Timeout web manual."));
-                                }, 7000);
-
                                 navigator.geolocation.getCurrentPosition(
-                                    (position) => {
-                                        clearTimeout(manualTimeout);
-                                        resolve(position);
-                                    },
-                                    (error) => {
-                                        clearTimeout(manualTimeout);
-                                        reject(error);
-                                    },
+                                    (position) => resolve(position),
+                                    (error) => reject(error),
                                     {
-                                        enableHighAccuracy: false,
-                                        timeout: 6000,
-                                        maximumAge: 300000
+                                        enableHighAccuracy: true,
+                                        timeout: 10000,
+                                        maximumAge: 0
                                     }
                                 );
                             });
