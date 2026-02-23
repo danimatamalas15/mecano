@@ -29,7 +29,9 @@ export default async function handler(request: Request) {
     else if (tipo === 'Electrónica') keyword = 'taller electricidad automovil';
     else if (tipo === 'Neumáticos') keyword = 'taller neumaticos';
 
-    const googleUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&rankby=distance&type=car_repair&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
+    const radio = 5000;
+
+    const googleUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radio}&type=car_repair&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
 
     try {
         const response = await fetch(googleUrl);

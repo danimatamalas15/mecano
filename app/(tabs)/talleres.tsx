@@ -1,11 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from 'expo-location';
 import { useState } from "react";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type TallerType = "Mecánica" | "Chapa" | "Electrónica" | "Neumáticos";
 
-// Mock Data Dinámico
+// Mostrar estrellas de Google
+const StarRating = ({ rating }: { rating: string }) => {
+    const numRating = parseFloat(rating);
+    return (
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Ionicons
+                    key={star}
+                    name={star <= numRating ? "star" : star - 0.5 <= numRating ? "star-half" : "star-outline"}
+                    size={12}
+                    color="#f59e0b"
+                />
+            ))}
+        </View>
+    );
+};
 
 // Fórmula Haversine para calcular distancia en km entre dos coordenadas
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -49,20 +64,30 @@ export default function Talleres() {
         try {
             if (locationType === "Auto") {
                 if (!userLocation) {
-                    const { status } = await Location.requestForegroundPermissionsAsync();
-                    if (status !== 'granted') {
-                        setLocationError("Permiso de ubicación denegado. Prueba con búsqueda manual.");
-                        setIsLoadingLocation(false);
-                        return;
+                    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+                        try {
+                            const pos: any = await new Promise((resolve, reject) => {
+                                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+                            });
+                            center = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                            setUserLocation(center);
+                        } catch (err: any) {
+                            setLocationError("El usuario denegó el permiso o hubo un error: " + err.message);
+                            setIsLoadingLocation(false);
+                            return;
+                        }
+                    } else {
+                        const { status } = await Location.requestForegroundPermissionsAsync();
+                        if (status !== 'granted') {
+                            setLocationError("Permiso de ubicación denegado. Prueba con búsqueda manual.");
+                            setIsLoadingLocation(false);
+                            return;
+                        }
+
+                        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+                        center = { lat: location.coords.latitude, lon: location.coords.longitude };
+                        setUserLocation(center);
                     }
-
-                    // Esperamos deliberadamente 2 segundos para dar tiempo al navegador/móvil a encender el GPS tras el "Sí"
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-
-                    // Forzamos "Highest" en lugar de "Balanced" para evitar que el navegador use la IP (que da Madrid por defecto en España)
-                    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-                    center = { lat: location.coords.latitude, lon: location.coords.longitude };
-                    setUserLocation(center);
                 } else {
                     center = userLocation;
                 }
@@ -138,22 +163,6 @@ export default function Talleres() {
 
     const handleOpenMap = (url: string) => {
         Linking.openURL(url).catch(err => console.error("Error al abrir mapa", err));
-    };
-
-    const StarRating = ({ rating }: { rating: string }) => {
-        const numRating = parseFloat(rating);
-        return (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Ionicons
-                        key={star}
-                        name={star <= numRating ? "star" : star - 0.5 <= numRating ? "star-half" : "star-outline"}
-                        size={12}
-                        color="#f59e0b"
-                    />
-                ))}
-            </View>
-        );
     };
 
     return (
