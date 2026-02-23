@@ -67,20 +67,51 @@ export default function Talleres() {
                     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
                         try {
                             const pos: any = await new Promise((resolve, reject) => {
-                                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                                    enableHighAccuracy: false, // En PC, forzar "true" hace que la petición se quede congelada buscando una antena GPS que no existe
-                                    timeout: 10000,            // Si en 10 segundos no responde, salta al error (fallback a Palma)
-                                    maximumAge: 300000         // Permite usar una ubicación de red en caché de hasta 5 minutos
-                                });
+                                // Envolvemos en un timeout manual porque los navegadores en PC por cable 
+                                // a veces ignoran los timeouts nativos si no tienen hardware Wi-Fi/GPS con el que comunicarse.
+                                const manualTimeout = setTimeout(() => {
+                                    reject(new Error("Timeout web manual."));
+                                }, 7000);
+
+                                navigator.geolocation.getCurrentPosition(
+                                    (position) => {
+                                        clearTimeout(manualTimeout);
+                                        resolve(position);
+                                    },
+                                    (error) => {
+                                        clearTimeout(manualTimeout);
+                                        reject(error);
+                                    },
+                                    {
+                                        enableHighAccuracy: false,
+                                        timeout: 6000,
+                                        maximumAge: 300000
+                                    }
+                                );
                             });
                             center = { lat: pos.coords.latitude, lon: pos.coords.longitude };
                             setUserLocation(center);
                         } catch (err: any) {
-                            console.warn("No se pudo obtener la ubicación real (Web), usando Palma de Mallorca por defecto.", err);
-                            // Ponemos coordenadas de respaldo (Palma de Mallorca)
-                            center = { lat: 39.5696, lon: 2.6502 };
-                            setUserLocation(center);
-                            setLocationError("No se pudo obtener ubicación real. Usando Palma de Mallorca por defecto.");
+                            console.warn("Fallo GPS Web, intentando geolocalizar por IP...", err);
+                            try {
+                                // Intento 2: Geolocalizar por IP de internet (Ideal para PCs de sobremesa conectados por Router/Cable)
+                                const ipResponse = await fetch('https://ipapi.co/json/');
+                                const ipData = await ipResponse.json();
+
+                                if (ipData.latitude && ipData.longitude) {
+                                    center = { lat: ipData.latitude, lon: ipData.longitude };
+                                    setUserLocation(center);
+                                    setLocationError(`[Nota]: Ubicación aproximada por IP (${ipData.city || 'Desconocida'}).`);
+                                } else {
+                                    throw new Error("Datos IP de geolocalización inválidos.");
+                                }
+                            } catch (ipErr: any) {
+                                console.warn("Fallo geolocalización IP, usando Palma de Mallorca por defecto.", ipErr);
+                                // Intento 3: Coordenadas de respaldo absoluto (Palma de Mallorca)
+                                center = { lat: 39.5696, lon: 2.6502 };
+                                setUserLocation(center);
+                                setLocationError("No se pudo obtener ubicación por GPS ni IP. Usando Palma de Mallorca.");
+                            }
                         }
                     } else {
                         const { status } = await Location.requestForegroundPermissionsAsync();
