@@ -60,6 +60,7 @@ export default function Talleres() {
         setHasSearched(false);
 
         let center: { lat: number, lon: number } | null = null;
+        let isFakeISPLocation = false;
 
         try {
             if (locationType === "Auto") {
