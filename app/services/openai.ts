@@ -106,10 +106,17 @@ Debes devolver obligatoriamente la respuesta en formato JSON de un array, respet
     "condition": "Nuevo ó Segunda Mano",
     "rating": "Ej: 4.8",
     "image": "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150",
-    "url": "https://www.google.com/search?q=comprar+..."
+    "url": "https://www.amazon.es/s?k=comprar+..."
   }
 ]
-Asegúrate de cambiar las urls de búsqueda para que apunten al repuesto + modelo a buscar en google. Emplea siempre una foto generica real que te di, como: https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150 , variando ligeramente. ¡MUY IMPORTANTE!: La lista que devuelvas DEBE estar ordenada obligatoriamente por PRECIO, desde el recambio más barato al más caro.`;
+
+Reglas muy importantes para el campo "url":
+1. ESTÁ ESTRICTAMENTE PROHIBIDO enviar al usuario a un buscador genérico como google.com.
+2. La "url" DEBE apuntar directamente al motor de búsqueda nativo de la tienda especificada en "store". Por ejemplo: si el store es "Amazon", usa "https://www.amazon.es/s?k={termino_búsqueda}"; si es "Oscaro", "https://www.oscaro.es/es/search?q={termino_búsqueda}"; si es "Autodoc", "https://www.autodoc.es/search?keyword={termino_búsqueda}", etc.
+3. El término de búsqueda debe ser extremadamente específico, ej: "Filtro aceite Ford Focus 2015".
+
+Emplea siempre una foto genérica real como: https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150 , variando ligeramente. 
+¡MUY IMPORTANTE!: La lista que devuelvas DEBE estar ordenada obligatoriamente por PRECIO, desde el recambio más barato al más caro.`;
 
     try {
         const response = await fetch(OPENAI_API_URL, {
