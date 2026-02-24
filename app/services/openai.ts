@@ -109,7 +109,7 @@ Debes devolver obligatoriamente la respuesta en formato JSON de un array, respet
     "url": "https://www.google.com/search?q=comprar+..."
   }
 ]
-Asegúrate de cambiar las urls de búsqueda para que apunten al repuesto + modelo a buscar en google. Emplea siempre una foto generica real que te di, como: https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150 , variando ligeramente.`;
+Asegúrate de cambiar las urls de búsqueda para que apunten al repuesto + modelo a buscar en google. Emplea siempre una foto generica real que te di, como: https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150 , variando ligeramente. ¡MUY IMPORTANTE!: La lista que devuelvas DEBE estar ordenada obligatoriamente por PRECIO, desde el recambio más barato al más caro.`;
 
     try {
         const response = await fetch(OPENAI_API_URL, {

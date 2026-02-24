@@ -43,6 +43,34 @@ export default function Repuestos() {
         }
     };
 
+    // Funciones auxiliares para procesar los datos
+    const parsePrice = (priceStr: string) => {
+        // Eliminar símbolos y convertir a float: "24,99 €" -> 24.99
+        const cleanStr = priceStr.replace(/[^\d,.-]/g, '').replace(',', '.');
+        return parseFloat(cleanStr) || 0;
+    };
+
+    const parseRating = (ratingStr: string) => {
+        return parseFloat(ratingStr) || 0;
+    };
+
+    // Aplicar filtros y orden en tiempo real
+    const filteredAndSortedResults = results
+        .filter(item => {
+            if (conditionFilter === "Nuevos") return item.condition.toLowerCase().includes("nuevo");
+            if (conditionFilter === "Segunda Mano") return item.condition.toLowerCase().includes("segunda") || item.condition.toLowerCase().includes("usado");
+            return true;
+        })
+        .sort((a, b) => {
+            if (orderFilter === "Precio") {
+                return parsePrice(a.price) - parsePrice(b.price); // Menor a mayor ($)
+            } else if (orderFilter === "Calidad") {
+                return parseRating(b.rating) - parseRating(a.rating); // Mayor a menor (Estrellas)
+            } else {
+                return a.name.localeCompare(b.name); // Alfabético (A-Z)
+            }
+        });
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
@@ -119,10 +147,10 @@ export default function Repuestos() {
 
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        {results.length === 0 ? (
-                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos.</Text>
+                        {filteredAndSortedResults.length === 0 ? (
+                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos con los filtros actuales.</Text>
                         ) : (
-                            results.map((item) => {
+                            filteredAndSortedResults.map((item) => {
                                 const cardContent = (
                                     <>
                                         <Image source={{ uri: item.image }} style={styles.resultImage} />
