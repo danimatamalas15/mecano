@@ -10,7 +10,7 @@ export interface YouTubeVideo {
 }
 
 export const fetchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
-    const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY || process.env.GOOGLE_MAPS_API_KEY; // Normalmente Maps y YouTube pueden compartir proyecto o no. Lo ideal es una llave para YT.
+    const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY; // Normalmente Maps y YouTube pueden compartir proyecto o no. Lo ideal es una llave para YT.
 
     // Si no hay API key de google, devolvemos videos simulados para no romper la app
     if (!apiKey) {

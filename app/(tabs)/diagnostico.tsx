@@ -177,22 +177,46 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                 {/* YOUTUBE VIDEOS */}
                                 <View style={styles.videosSection}>
                                     <Text style={styles.sectionSubtitle}>{mockVideos.length} Vídeos Relacionados con tu vehículo</Text>
-                                    {mockVideos.map(video => (
-                                        <TouchableOpacity
-                                            key={video.id}
-                                            style={styles.videoCard}
-                                            onPress={() => openLink(video.url)}
-                                        >
-                                            <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
-                                            <View style={styles.videoInfo}>
-                                                <Text style={styles.videoTitle}>{video.title}</Text>
-                                                <Text style={styles.videoMeta}>{video.views}</Text>
-                                                <View style={styles.badge}>
-                                                    <Text style={styles.badgeText}>{video.lang}</Text>
+                                    {mockVideos.map(video => {
+                                        const cardContent = (
+                                            <>
+                                                <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
+                                                <View style={styles.videoInfo}>
+                                                    <Text style={styles.videoTitle}>{video.title}</Text>
+                                                    <Text style={styles.videoMeta}>{video.views}</Text>
+                                                    <View style={styles.badge}>
+                                                        <Text style={styles.badgeText}>{video.lang}</Text>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                        </TouchableOpacity>
-                                    ))}
+                                            </>
+                                        );
+
+                                        if (Platform.OS === 'web') {
+                                            return (
+                                                <a
+                                                    key={video.id}
+                                                    href={video.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ textDecoration: 'none', display: 'flex' }}
+                                                >
+                                                    <View style={[styles.videoCard, { flex: 1 }]}>
+                                                        {cardContent}
+                                                    </View>
+                                                </a>
+                                            );
+                                        }
+
+                                        return (
+                                            <TouchableOpacity
+                                                key={video.id}
+                                                style={styles.videoCard}
+                                                onPress={() => openLink(video.url)}
+                                            >
+                                                {cardContent}
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                 </View>
                             </View>
                         ) : (
