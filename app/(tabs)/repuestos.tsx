@@ -2,13 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-// Mock Data
-const MOCK_RESULTS = [
-    { id: "1", name: "Filtro de Aceite Bosch Premium", store: "Amazon", price: "12,50 €", condition: "Nuevo", rating: "4.8", image: "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150" },
-    { id: "2", name: "Filtro Aceite Original OEM", store: "Oscaro", price: "9,99 €", condition: "Nuevo", rating: "4.5", image: "https://images.unsplash.com/photo-1647426867375-7b79aed8b51d?q=80&w=150" },
-    { id: "3", name: "Lote 3 Filtros de Aceite Genéricos", store: "AliExpress", price: "15,00 €", condition: "Nuevo", rating: "3.5", image: "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150" },
-    { id: "4", name: "Carcasa Filtro de Aceite (Desguace)", store: "Milanuncios", price: "5,00 €", condition: "Segunda Mano", rating: "-", image: "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150" }
-];
+import { ActivityIndicator, Linking, Platform } from "react-native";
+import { fetchChatGPTSpares, SparePart } from "../services/openai";
 
 export default function Repuestos() {
     const [hasSearched, setHasSearched] = useState(false);
@@ -17,16 +12,35 @@ export default function Repuestos() {
     const [conditionFilter, setConditionFilter] = useState<"Todos" | "Nuevos" | "Segunda Mano">("Todos");
     const [orderFilter, setOrderFilter] = useState<"Precio" | "Calidad" | "Nombre">("Precio");
 
-    const handleSearch = () => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState<SparePart[]>([]);
+
+    const handleSearch = async () => {
         if (!vehicleQuery.trim() || !itemQuery.trim()) {
             alert("Por favor, rellena el vehículo y el repuesto que buscas.");
             return;
         }
-        setHasSearched(true);
+
+        setIsLoading(true);
+        setHasSearched(false);
+        setResults([]);
+
+        try {
+            const fetchedSpares = await fetchChatGPTSpares(vehicleQuery, itemQuery);
+            setResults(fetchedSpares);
+            setHasSearched(true);
+        } catch (error) {
+            console.error("Error buscando repuestos:", error);
+            alert("Ocurrió un error al intentar buscar los repuestos con la IA.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const openLink = (store: string) => {
-        alert(`Abriendo tienda externa:\n${store}`);
+    const openLink = (url: string) => {
+        if (url && url !== "#") {
+            Linking.openURL(url).catch((err) => console.error("Error abriendo URL externa: ", err));
+        }
     };
 
     return (
@@ -55,6 +69,14 @@ export default function Repuestos() {
                     <Text style={styles.submitButtonText}>BUSCAR REPUESTOS</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* INDICADOR DE CARGA */}
+            {isLoading && (
+                <View style={{ padding: 30, alignItems: "center" }}>
+                    <ActivityIndicator size="large" color="#f59e0b" />
+                    <Text style={{ marginTop: 10, color: "#64748b" }}>Buscando repuestos exactos...</Text>
+                </View>
+            )}
 
             {/* RESULTADOS DE BÚSQUEDA */}
             {hasSearched && (
@@ -97,30 +119,58 @@ export default function Repuestos() {
 
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        {MOCK_RESULTS.map((item) => (
-                            <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.store)}>
-                                <Image source={{ uri: item.image }} style={styles.resultImage} />
-                                <View style={styles.resultInfo}>
-                                    <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
-                                    <View style={styles.resultMetaRow}>
-                                        <Text style={styles.resultStore}>{item.store}</Text>
-                                        <View style={styles.badgeWrapper}>
-                                            <Text style={styles.conditionBadge}>{item.condition}</Text>
+                        {results.length === 0 ? (
+                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos.</Text>
+                        ) : (
+                            results.map((item) => {
+                                const cardContent = (
+                                    <>
+                                        <Image source={{ uri: item.image }} style={styles.resultImage} />
+                                        <View style={styles.resultInfo}>
+                                            <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
+                                            <View style={styles.resultMetaRow}>
+                                                <Text style={styles.resultStore}>{item.store}</Text>
+                                                <View style={styles.badgeWrapper}>
+                                                    <Text style={styles.conditionBadge}>{item.condition}</Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.priceRow}>
+                                                <Text style={styles.resultPrice}>{item.price}</Text>
+                                                <View style={styles.ratingBox}>
+                                                    <Ionicons name="star" size={12} color="#f59e0b" />
+                                                    <Text style={styles.ratingText}>{item.rating}</Text>
+                                                </View>
+                                            </View>
                                         </View>
-                                    </View>
-                                    <View style={styles.priceRow}>
-                                        <Text style={styles.resultPrice}>{item.price}</Text>
-                                        <View style={styles.ratingBox}>
-                                            <Ionicons name="star" size={12} color="#f59e0b" />
-                                            <Text style={styles.ratingText}>{item.rating}</Text>
+                                        <View style={styles.chevronBox}>
+                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
                                         </View>
-                                    </View>
-                                </View>
-                                <View style={styles.chevronBox}>
-                                    <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                </View>
-                            </TouchableOpacity>
-                        ))}
+                                    </>
+                                );
+
+                                if (Platform.OS === 'web') {
+                                    return (
+                                        <a
+                                            key={item.id}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ textDecoration: 'none', display: 'flex' }}
+                                        >
+                                            <View style={[styles.resultCard, { flex: 1 }]}>
+                                                {cardContent}
+                                            </View>
+                                        </a>
+                                    );
+                                }
+
+                                return (
+                                    <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.url)}>
+                                        {cardContent}
+                                    </TouchableOpacity>
+                                );
+                            })
+                        )}
                     </View>
                 </View>
             )}
