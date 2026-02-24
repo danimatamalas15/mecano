@@ -42,9 +42,11 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo y la 
 3. Consejos de seguridad y prevenciones de errores comunes durante el desmontaje y ensamblaje.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-) o números (1., 2., ...).`;
 
+            const youtubeQuery = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} como reparar ${repairQuery.trim()}`;
+
             const [result, videosData] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(`Reparar ${searchQuery} ${repairQuery}`)
+                fetchYouTubeVideos(youtubeQuery)
             ]);
 
             setAiResponse(result);
@@ -164,7 +166,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
 
                                 {/* YOUTUBE VIDEOS */}
                                 <View style={styles.videosSection}>
-                                    <Text style={styles.sectionSubtitle}>20 Vídeos de YouTube Relacionados a tu consulta</Text>
+                                    <Text style={styles.sectionSubtitle}>{mockVideos.length} Vídeos Relacionados con tu vehículo</Text>
                                     {mockVideos.map(video => (
                                         <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => openLink(video.url)}>
                                             <Image source={{ uri: video.image }} style={styles.videoThumbnail} />

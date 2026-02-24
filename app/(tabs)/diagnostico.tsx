@@ -44,9 +44,11 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 3. Pasos de comprobación y pruebas específicas recomendadas para descartar cada causa.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
+            const youtubeQuery = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} diagnóstico ${symptoms.trim()}`;
+
             const [result, videosData] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(`Diagnóstico ${searchQuery} ${symptoms}`)
+                fetchYouTubeVideos(youtubeQuery)
             ]);
 
             setAiResponse(result);
@@ -174,7 +176,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
 
                                 {/* YOUTUBE VIDEOS */}
                                 <View style={styles.videosSection}>
-                                    <Text style={styles.sectionSubtitle}>20 Vídeos de YouTube Relacionados a tu consulta</Text>
+                                    <Text style={styles.sectionSubtitle}>{mockVideos.length} Vídeos Relacionados con tu vehículo</Text>
                                     {mockVideos.map(video => (
                                         <TouchableOpacity
                                             key={video.id}

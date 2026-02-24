@@ -26,7 +26,7 @@ export const fetchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]>
     }
 
     try {
-        const url = `${YOUTUBE_API_URL}?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
+        const url = `${YOUTUBE_API_URL}?part=snippet&maxResults=30&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -37,14 +37,23 @@ export const fetchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]>
 
         if (!data.items || data.items.length === 0) return [];
 
-        return data.items.map((item: any) => ({
-            id: item.id.videoId,
-            title: item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
-            views: "Nuevo",
-            image: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
-            lang: "Vídeo Externo",
-            url: `https://www.youtube.com/watch?v=${item.id.videoId}`
-        }));
+        // Evitar duplicados basados en ID
+        const uniqueVideos = new Map();
+
+        data.items.forEach((item: any) => {
+            if (!uniqueVideos.has(item.id.videoId)) {
+                uniqueVideos.set(item.id.videoId, {
+                    id: item.id.videoId,
+                    title: item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
+                    views: "Nuevo",
+                    image: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+                    lang: "Vídeo Externo",
+                    url: `https://www.youtube.com/watch?v=${item.id.videoId}`
+                });
+            }
+        });
+
+        return Array.from(uniqueVideos.values());
 
     } catch (error) {
         console.error("Fallo obteniendo YouTube Videos:", error);
