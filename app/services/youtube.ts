@@ -9,20 +9,21 @@ export interface YouTubeVideo {
     url: string;
 }
 
-try {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const url = `${baseUrl}/api/youtube?q=${encodeURIComponent(query)}`;
-    const response = await fetch(url);
+export const fetchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
+    try {
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        const url = `${baseUrl}/api/youtube?q=${encodeURIComponent(query)}`;
+        const response = await fetch(url);
 
-    if (!response.ok) {
-        throw new Error(`Error de YouTube Backend: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`Error de YouTube Backend: ${response.status}`);
+        }
+
+        const videos = await response.json();
+        return Array.isArray(videos) ? videos : [];
+
+    } catch (error) {
+        console.error("Fallo obteniendo YouTube Videos:", error);
+        return [];
     }
-
-    const videos = await response.json();
-    return Array.isArray(videos) ? videos : [];
-
-} catch (error) {
-    console.error("Fallo obteniendo YouTube Videos:", error);
-    return [];
-}
 };
