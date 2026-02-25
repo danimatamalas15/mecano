@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 interface Props {
@@ -24,7 +24,7 @@ export default function GoogleSearchWidget({ query }: Props) {
             </style>
         </head>
         <body>
-            <div class="gcse-search" data-gname="store-search"></div>
+            <div class="gcse-search" data-gname="store-search" data-linktarget="_blank"></div>
             <script>
                 // Sobrescribimos la inicialización para auto-lanzar la búsqueda
                 window.__gcse = {
@@ -89,6 +89,14 @@ export default function GoogleSearchWidget({ query }: Props) {
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 onLoadEnd={() => setIsLoading(false)}
+                onShouldStartLoadWithRequest={(request) => {
+                    // Prevenir la navegación interna en la WebView y enviarla al navegador nativo
+                    if (request.url !== 'about:blank' && !request.url.startsWith('https://www.google.com') && !request.url.startsWith('data:')) {
+                        Linking.openURL(request.url);
+                        return false; // Bloquear en el Iframe
+                    }
+                    return true; // Permitir carga de scripts internos de Google
+                }}
             />
         </View>
     );
