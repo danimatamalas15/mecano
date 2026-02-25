@@ -27,11 +27,11 @@ export default async function handler(request: Request) {
         });
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_SEARCH_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
     const cx = process.env.GOOGLE_CX || process.env.EXPO_PUBLIC_GOOGLE_CX;
 
     if (!apiKey || !cx) {
-        return new Response(JSON.stringify({ error: 'Falta configurar API Key o GOOGLE_CX en el servidor' }), {
+        return new Response(JSON.stringify({ error: 'Falta configurar API Key (EXPO_PUBLIC_GOOGLE_SEARCH_API_KEY) o GOOGLE_CX en el servidor' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
