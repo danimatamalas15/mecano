@@ -3,17 +3,14 @@ import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 import { ActivityIndicator, Linking, Platform } from "react-native";
-import { fetchChatGPTSpares, SparePart } from "../services/openai";
 
 export default function Repuestos() {
     const [hasSearched, setHasSearched] = useState(false);
     const [vehicleQuery, setVehicleQuery] = useState("");
     const [itemQuery, setItemQuery] = useState("");
-    const [conditionFilter, setConditionFilter] = useState<"Todos" | "Nuevos" | "Segunda Mano">("Todos");
-    const [orderFilter, setOrderFilter] = useState<"Precio" | "Calidad" | "Nombre">("Precio");
 
     const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<SparePart[]>([]);
+    const [results, setResults] = useState<any[]>([]);
 
     const handleSearch = async () => {
         if (!vehicleQuery.trim() || !itemQuery.trim()) {
@@ -26,12 +23,23 @@ export default function Repuestos() {
         setResults([]);
 
         try {
-            const fetchedSpares = await fetchChatGPTSpares(vehicleQuery, itemQuery);
-            setResults(fetchedSpares);
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+            const relativeUrl = `${baseUrl}/api/buscar?vehiculo=${encodeURIComponent(vehicleQuery)}&repuesto=${encodeURIComponent(itemQuery)}`;
+
+            const response = await fetch(relativeUrl);
+            const data = await response.json();
+
+            if (response.ok && data.items) {
+                setResults(data.items);
+            } else if (data.error) {
+                alert(`Error del servidor: ${data.error}`);
+            } else {
+                setResults([]);
+            }
             setHasSearched(true);
         } catch (error) {
             console.error("Error buscando repuestos:", error);
-            alert("Ocurrió un error al intentar buscar los repuestos con la IA.");
+            alert("Hubo un error de conexión con tu servidor. Inténtalo de nuevo más tarde.");
         } finally {
             setIsLoading(false);
         }
@@ -42,34 +50,6 @@ export default function Repuestos() {
             Linking.openURL(url).catch((err) => console.error("Error abriendo URL externa: ", err));
         }
     };
-
-    // Funciones auxiliares para procesar los datos
-    const parsePrice = (priceStr: string) => {
-        // Eliminar símbolos y convertir a float: "24,99 €" -> 24.99
-        const cleanStr = priceStr.replace(/[^\d,.-]/g, '').replace(',', '.');
-        return parseFloat(cleanStr) || 0;
-    };
-
-    const parseRating = (ratingStr: string) => {
-        return parseFloat(ratingStr) || 0;
-    };
-
-    // Aplicar filtros y orden en tiempo real
-    const filteredAndSortedResults = results
-        .filter(item => {
-            if (conditionFilter === "Nuevos") return item.condition.toLowerCase().includes("nuevo");
-            if (conditionFilter === "Segunda Mano") return item.condition.toLowerCase().includes("segunda") || item.condition.toLowerCase().includes("usado");
-            return true;
-        })
-        .sort((a, b) => {
-            if (orderFilter === "Precio") {
-                return parsePrice(a.price) - parsePrice(b.price); // Menor a mayor ($)
-            } else if (orderFilter === "Calidad") {
-                return parseRating(b.rating) - parseRating(a.rating); // Mayor a menor (Estrellas)
-            } else {
-                return a.name.localeCompare(b.name); // Alfabético (A-Z)
-            }
-        });
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -112,63 +92,23 @@ export default function Repuestos() {
                     <Text style={styles.resultsTitle}>Mejores Resultados para "{itemQuery}"</Text>
                     <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {vehicleQuery}</Text>
 
-                    {/* FILTROS */}
-                    <View style={styles.filtersWrapper}>
-                        <View style={styles.filterGroup}>
-                            <Text style={styles.filterLabel}>Estado:</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                                {["Todos", "Nuevos", "Segunda Mano"].map((ctg) => (
-                                    <TouchableOpacity
-                                        key={ctg}
-                                        style={[styles.filterPill, conditionFilter === ctg && styles.filterPillActive]}
-                                        onPress={() => setConditionFilter(ctg as any)}
-                                    >
-                                        <Text style={[styles.filterPillText, conditionFilter === ctg && styles.filterPillTextActive]}>{ctg}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-
-                        <View style={styles.filterGroup}>
-                            <Text style={styles.filterLabel}>Ordenar por:</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                                {["Precio", "Calidad", "Nombre"].map((ord) => (
-                                    <TouchableOpacity
-                                        key={ord}
-                                        style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
-                                        onPress={() => setOrderFilter(ord as any)}
-                                    >
-                                        <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    </View>
-
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        {filteredAndSortedResults.length === 0 ? (
-                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos con los filtros actuales.</Text>
+                        {results.length === 0 ? (
+                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos específicos. Intenta usar términos más generales.</Text>
                         ) : (
-                            filteredAndSortedResults.map((item) => {
+                            results.map((item, index) => {
+                                const imageSrc = item.pagemap?.cse_image?.[0]?.src || "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150";
+
                                 const cardContent = (
                                     <>
-                                        <Image source={{ uri: item.image }} style={styles.resultImage} />
+                                        <Image source={{ uri: imageSrc }} style={styles.resultImage} />
                                         <View style={styles.resultInfo}>
-                                            <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
+                                            <Text style={styles.resultName} numberOfLines={2}>{item.title}</Text>
                                             <View style={styles.resultMetaRow}>
-                                                <Text style={styles.resultStore}>{item.store}</Text>
-                                                <View style={styles.badgeWrapper}>
-                                                    <Text style={styles.conditionBadge}>{item.condition}</Text>
-                                                </View>
+                                                <Text style={styles.resultStore}>{item.displayLink}</Text>
                                             </View>
-                                            <View style={styles.priceRow}>
-                                                <Text style={styles.resultPrice}>{item.price}</Text>
-                                                <View style={styles.ratingBox}>
-                                                    <Ionicons name="star" size={12} color="#f59e0b" />
-                                                    <Text style={styles.ratingText}>{item.rating}</Text>
-                                                </View>
-                                            </View>
+                                            <Text style={{ fontSize: 12, color: "#64748b", marginTop: 4 }} numberOfLines={2}>{item.snippet}</Text>
                                         </View>
                                         <View style={styles.chevronBox}>
                                             <Ionicons name="open-outline" size={20} color="#94a3b8" />
@@ -179,8 +119,8 @@ export default function Repuestos() {
                                 if (Platform.OS === 'web') {
                                     return (
                                         <a
-                                            key={item.id}
-                                            href={item.url}
+                                            key={index}
+                                            href={item.link}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             style={{ textDecoration: 'none', display: 'flex' }}
@@ -193,7 +133,7 @@ export default function Repuestos() {
                                 }
 
                                 return (
-                                    <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.url)}>
+                                    <TouchableOpacity key={index} style={styles.resultCard} onPress={() => openLink(item.link)}>
                                         {cardContent}
                                     </TouchableOpacity>
                                 );
