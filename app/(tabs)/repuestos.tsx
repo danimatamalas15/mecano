@@ -1,16 +1,47 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import GoogleSearchWidget from "../components/GoogleSearchWidget";
+import { ActivityIndicator, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Repuestos() {
     const [hasSearched, setHasSearched] = useState(false);
     const [vehicleQuery, setVehicleQuery] = useState("");
     const [itemQuery, setItemQuery] = useState("");
+    const [orderFilter, setOrderFilter] = useState<"Precio" | "Fecha" | "Relevancia">("Precio");
 
     const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState<any[]>([]);
 
-    const handleSearch = () => {
+    const extractPrice = (item: any): number => {
+        // Intentar parsear precio del pagemap offer o product
+        if (item.pagemap?.offer?.[0]?.price) {
+            const price = parseFloat(item.pagemap.offer[0].price);
+            if (!isNaN(price)) return price;
+        }
+        if (item.pagemap?.product?.[0]?.price) {
+            const price = parseFloat(item.pagemap.product[0].price);
+            if (!isNaN(price)) return price;
+        }
+        // Buscar patrón de precio en snippet (ej. 15,99 € o 15.99 € o 15€)
+        const text = (item.snippet || "") + " " + (item.title || "");
+        const match = text.match(/([\d]+[.,]?[\d]*)\s*(€|EUR|USD|\$|£)/i);
+        if (match) {
+            return parseFloat(match[1].replace(',', '.'));
+        }
+        return Infinity; // Si no hay precio, al fondo
+    };
+
+    const extractDate = (item: any): number => {
+        // Intentar obtener fecha de publicacion o de metatags
+        if (item.pagemap?.metatags?.[0]?.['article:published_time']) {
+            return new Date(item.pagemap.metatags[0]['article:published_time']).getTime();
+        }
+        if (item.pagemap?.metatags?.[0]?.['og:updated_time']) {
+            return new Date(item.pagemap.metatags[0]['og:updated_time']).getTime();
+        }
+        return 0; // Si no hay fecha, poner abajo
+    };
+
+    const handleSearch = async () => {
         if (!vehicleQuery.trim() || !itemQuery.trim()) {
             alert("Por favor, rellena el vehículo y el repuesto que buscas.");
             return;
@@ -18,12 +49,47 @@ export default function Repuestos() {
 
         setIsLoading(true);
         setHasSearched(false);
+        setResults([]);
 
-        // Timeout para UX y garantizar remontaje del componente
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+            const relativeUrl = `${baseUrl}/api/buscar?vehiculo=${encodeURIComponent(vehicleQuery)}&repuesto=${encodeURIComponent(itemQuery)}`;
+
+            const response = await fetch(relativeUrl);
+            const data = await response.json();
+
+            if (response.ok && data.items) {
+                setResults(data.items);
+            } else if (data.error) {
+                alert(`Error del servidor: ${data.error}`);
+            } else {
+                setResults([]);
+            }
+            setOrderFilter("Precio");
             setHasSearched(true);
-        }, 500);
+        } catch (error) {
+            console.error("Error buscando repuestos:", error);
+            alert("Hubo un error de conexión con tu servidor. Inténtalo de nuevo más tarde.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const sortedResults = [...results].sort((a, b) => {
+        if (orderFilter === "Precio") {
+            return extractPrice(a) - extractPrice(b); // Menor a mayor
+        }
+        if (orderFilter === "Fecha") {
+            return extractDate(b) - extractDate(a); // Mas reciente primero
+        }
+        // Relevancia: orden que viene de Google (mantenemos original)
+        return 0;
+    });
+
+    const openLink = (url: string) => {
+        if (url && url !== "#") {
+            Linking.openURL(url).catch((err) => console.error("Error abriendo URL externa: ", err));
+        }
     };
 
     return (
@@ -65,9 +131,76 @@ export default function Repuestos() {
             {hasSearched && (
                 <View style={styles.resultsContainer}>
                     <Text style={styles.resultsTitle}>Mejores Resultados para "{itemQuery}"</Text>
-                    {/* RESULTADOS EMPOTRADOS (WIDGET DE GOOGLE) */}
+                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {vehicleQuery}</Text>
+
+                    {/* FILTROS */}
+                    <View style={styles.filtersWrapper}>
+                        <View style={styles.filterGroup}>
+                            <Text style={styles.filterLabel}>Ordenar por:</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                                {["Precio", "Fecha", "Relevancia"].map((ord) => (
+                                    <TouchableOpacity
+                                        key={ord}
+                                        style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
+                                        onPress={() => setOrderFilter(ord as any)}
+                                    >
+                                        <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    </View>
+
+                    {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        <GoogleSearchWidget query={`comprar ${itemQuery} para ${vehicleQuery}`} />
+                        {sortedResults.length === 0 ? (
+                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos específicos. Intenta usar términos más generales.</Text>
+                        ) : (
+                            sortedResults.map((item, index) => {
+                                const imageSrc = item.pagemap?.cse_image?.[0]?.src || "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150";
+                                const price = extractPrice(item);
+                                const displayPrice = price !== Infinity ? `${price.toFixed(2)} €` : 'Ver web';
+
+                                const cardContent = (
+                                    <>
+                                        <Image source={{ uri: imageSrc }} style={styles.resultImage} />
+                                        <View style={styles.resultInfo}>
+                                            <Text style={styles.resultName} numberOfLines={2}>{item.title}</Text>
+                                            <View style={styles.resultMetaRow}>
+                                                <Text style={styles.resultStore} numberOfLines={1}>{item.displayLink}</Text>
+                                            </View>
+                                            <Text style={styles.resultPrice}>{displayPrice}</Text>
+                                            <Text style={{ fontSize: 12, color: "#64748b", marginTop: 4 }} numberOfLines={2}>{item.snippet}</Text>
+                                        </View>
+                                        <View style={styles.chevronBox}>
+                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                                        </View>
+                                    </>
+                                );
+
+                                if (Platform.OS === 'web') {
+                                    return (
+                                        <a
+                                            key={index}
+                                            href={item.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ textDecoration: 'none', display: 'flex' }}
+                                        >
+                                            <View style={[styles.resultCard, { flex: 1 }]}>
+                                                {cardContent}
+                                            </View>
+                                        </a>
+                                    );
+                                }
+
+                                return (
+                                    <TouchableOpacity key={index} style={styles.resultCard} onPress={() => openLink(item.link)}>
+                                        {cardContent}
+                                    </TouchableOpacity>
+                                );
+                            })
+                        )}
                     </View>
                 </View>
             )}
@@ -107,5 +240,29 @@ const styles = StyleSheet.create({
     // Results
     resultsContainer: { borderTopWidth: 2, borderTopColor: "#e2e8f0", paddingTop: 20 },
     resultsTitle: { fontSize: 18, fontWeight: "bold", color: "#0f172a", marginBottom: 16 },
-    listContainer: { gap: 12, marginTop: 10 }
+    filtersWrapper: { marginBottom: 16, gap: 12 },
+    filterGroup: { gap: 6 },
+    filterLabel: { fontSize: 13, fontWeight: "600", color: "#64748b" },
+    filterScroll: { gap: 8, paddingRight: 20 },
+    filterPill: {
+        paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+        backgroundColor: "#f1f5f9", borderWidth: 1, borderColor: "#e2e8f0"
+    },
+    filterPillActive: { backgroundColor: "#f59e0b", borderColor: "#d97706" },
+    filterPillText: { fontSize: 13, color: "#64748b", fontWeight: "500" },
+    filterPillTextActive: { color: "#ffffff", fontWeight: "bold" },
+
+    listContainer: { gap: 12, marginTop: 10 },
+    resultCard: {
+        flexDirection: "row", backgroundColor: "#ffffff", borderRadius: 12, overflow: "hidden",
+        borderWidth: 1, borderColor: "#e2e8f0", padding: 12, alignItems: "center",
+        elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4
+    },
+    resultImage: { width: 70, height: 70, borderRadius: 8, backgroundColor: "#f1f5f9" },
+    resultInfo: { flex: 1, marginLeft: 12, justifyContent: "center" },
+    resultName: { fontSize: 14, fontWeight: "bold", color: "#0f172a", marginBottom: 4 },
+    resultMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
+    resultStore: { fontSize: 12, color: "#64748b", fontWeight: "600" },
+    resultPrice: { fontSize: 16, fontWeight: "bold", color: "#10b981", marginTop: 2 },
+    chevronBox: { paddingLeft: 10 }
 });
