@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -45,7 +45,17 @@ export default function GoogleSearchWidget({ query }: Props) {
 
     // Render Web (Iframe)
     if (Platform.OS === 'web') {
-        const encodedHtml = encodeURIComponent(htmlContent);
+        const iframeRef = useRef<HTMLIFrameElement>(null);
+
+        useEffect(() => {
+            if (iframeRef.current && iframeRef.current.contentWindow) {
+                const doc = iframeRef.current.contentWindow.document;
+                doc.open();
+                doc.write(htmlContent);
+                doc.close();
+            }
+        }, [htmlContent]);
+
         return (
             <View style={styles.container}>
                 {isLoading && (
@@ -53,8 +63,9 @@ export default function GoogleSearchWidget({ query }: Props) {
                         <ActivityIndicator size="large" color="#8b5cf6" />
                     </View>
                 )}
+                {/* @ts-ignore - React Native Web permite renderizar iframes como elementos HTML nativos */}
                 <iframe
-                    src={`data:text/html;charset=utf-8,${encodedHtml}`}
+                    ref={iframeRef}
                     style={{ width: '100%', minHeight: '800px', height: '100%', border: 'none', position: isLoading ? 'absolute' : 'relative', opacity: isLoading ? 0 : 1 }}
                     title="Google Search"
                     onLoad={() => setIsLoading(false)}
@@ -72,7 +83,7 @@ export default function GoogleSearchWidget({ query }: Props) {
                 </View>
             )}
             <WebView
-                source={{ html: htmlContent }}
+                source={{ html: htmlContent, baseUrl: 'https://www.google.com' }}
                 style={{ flex: 1, backgroundColor: 'transparent', opacity: isLoading ? 0 : 1 }}
                 originWhitelist={['*']}
                 javaScriptEnabled={true}
