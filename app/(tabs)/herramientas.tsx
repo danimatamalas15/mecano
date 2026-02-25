@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import GoogleSearchWidget from "../components/GoogleSearchWidget";
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
     const [itemQuery, setItemQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
 
-    const handleSearch = async () => {
+    const handleSearch = () => {
         if (!itemQuery.trim()) {
             alert("Por favor, introduce la herramienta que deseas buscar.");
             return;
@@ -16,35 +16,12 @@ export default function Herramientas() {
 
         setIsLoading(true);
         setHasSearched(false);
-        setResults([]);
 
-        try {
-            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            const relativeUrl = `${baseUrl}/api/buscar?herramienta=${encodeURIComponent(itemQuery)}`;
-
-            const response = await fetch(relativeUrl);
-            const data = await response.json();
-
-            if (response.ok && data.items) {
-                setResults(data.items);
-            } else if (data.error) {
-                alert(`Error del servidor: ${data.error}`);
-            } else {
-                setResults([]);
-            }
-            setHasSearched(true);
-        } catch (error) {
-            console.error("Error buscando herramientas:", error);
-            alert("Hubo un error de conexión con el servidor de búsqueda.");
-        } finally {
+        // Simular tiempo de carga del iframe para experiencia fluida
+        setTimeout(() => {
             setIsLoading(false);
-        }
-    };
-
-    const openLink = (url: string) => {
-        if (url && url !== "#") {
-            Linking.openURL(url).catch((err) => console.error("Error abriendo URL externa: ", err));
-        }
+            setHasSearched(true);
+        }, 500);
     };
 
     return (
@@ -80,53 +57,9 @@ export default function Herramientas() {
                     <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
                     <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas reales recomendadas</Text>
 
-                    {/* LISTA DE RESULTADOS */}
+                    {/* LISTA DE RESULTADOS DEL BUSCADOR PROGRAMABLE G CSE */}
                     <View style={styles.listContainer}>
-                        {results.length === 0 ? (
-                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron herramientas específicas. Intenta usar términos más generales.</Text>
-                        ) : (
-                            results.map((item, index) => {
-                                const imageSrc = item.pagemap?.cse_image?.[0]?.src || "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150";
-
-                                const cardContent = (
-                                    <>
-                                        <Image source={{ uri: imageSrc }} style={styles.resultImage} />
-                                        <View style={styles.resultInfo}>
-                                            <Text style={styles.resultName} numberOfLines={2}>{item.title}</Text>
-                                            <View style={styles.resultMetaRow}>
-                                                <Text style={styles.resultStore}>{item.displayLink}</Text>
-                                            </View>
-                                            <Text style={{ fontSize: 12, color: "#64748b", marginTop: 4 }} numberOfLines={2}>{item.snippet}</Text>
-                                        </View>
-                                        <View style={styles.chevronBox}>
-                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                        </View>
-                                    </>
-                                );
-
-                                if (Platform.OS === 'web') {
-                                    return (
-                                        <a
-                                            key={index}
-                                            href={item.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{ textDecoration: 'none', display: 'flex' }}
-                                        >
-                                            <View style={[styles.resultCard, { flex: 1 }]}>
-                                                {cardContent}
-                                            </View>
-                                        </a>
-                                    );
-                                }
-
-                                return (
-                                    <TouchableOpacity key={index} style={styles.resultCard} onPress={() => openLink(item.link)}>
-                                        {cardContent}
-                                    </TouchableOpacity>
-                                );
-                            })
-                        )}
+                        <GoogleSearchWidget query={`comprar herramienta ${itemQuery}`} />
                     </View>
                 </View>
             )}
