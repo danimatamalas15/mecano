@@ -1,65 +1,51 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Image, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
     const [itemQuery, setItemQuery] = useState("");
-    const [orderFilter, setOrderFilter] = useState<"Precio" | "Calidad" | "Nombre">("Precio");
-    const [mockResults, setMockResults] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState<any[]>([]);
 
-    const generateMockResults = (query: string) => {
-        const STORES = ["Amazon", "Ebay", "AliExpress", "AutoParts", "MecanoStore"];
-        return Array.from({ length: 100 }).map((_, i) => {
-            const storeName = STORES[i % STORES.length];
-            const itemName = `${query} Profesional - Modelo ${i + 1}`;
-            return {
-                id: String(i + 1),
-                name: itemName,
-                store: storeName,
-                price: `${(Math.random() * 100 + 10).toFixed(2).replace('.', ',')} €`,
-                rating: (Math.random() * 2 + 3).toFixed(1), // entre 3.0 y 5.0
-                image: [
-                    "https://images.unsplash.com/photo-1544473636-6e792eabcbba?q=80&w=150",
-                    "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=150",
-                    "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150"
-                ][i % 3],
-                url: `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(itemName + ' ' + storeName)}`
-            };
-        });
-    };
-
-    const handleSearch = () => {
+    const handleSearch = async () => {
         if (!itemQuery.trim()) {
             alert("Por favor, introduce la herramienta que deseas buscar.");
             return;
         }
-        setMockResults(generateMockResults(itemQuery));
-        setOrderFilter("Precio"); // Predefinido por precio menor a mayor cada vez que se busca
-        setHasSearched(true);
+
+        setIsLoading(true);
+        setHasSearched(false);
+        setResults([]);
+
+        try {
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+            const relativeUrl = `${baseUrl}/api/buscar?herramienta=${encodeURIComponent(itemQuery)}`;
+
+            const response = await fetch(relativeUrl);
+            const data = await response.json();
+
+            if (response.ok && data.items) {
+                setResults(data.items);
+            } else if (data.error) {
+                alert(`Error del servidor: ${data.error}`);
+            } else {
+                setResults([]);
+            }
+            setHasSearched(true);
+        } catch (error) {
+            console.error("Error buscando herramientas:", error);
+            alert("Hubo un error de conexión con el servidor de búsqueda.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const openLink = (url: string) => {
-        Linking.openURL(url).catch(err => console.error("Error al abrir URL:", err));
+        if (url && url !== "#") {
+            Linking.openURL(url).catch((err) => console.error("Error abriendo URL externa: ", err));
+        }
     };
-
-    const sortedResults = [...mockResults].sort((a, b) => {
-        if (orderFilter === "Precio") {
-            const priceA = parseFloat(a.price.replace(',', '.'));
-            const priceB = parseFloat(b.price.replace(',', '.'));
-            return priceA - priceB;
-        }
-        if (orderFilter === "Calidad") {
-            const ratingA = parseFloat(a.rating);
-            const ratingB = parseFloat(b.rating);
-            // Ordenar calidad de mayor a menor
-            return ratingB - ratingA;
-        }
-        if (orderFilter === "Nombre") {
-            return a.name.localeCompare(b.name);
-        }
-        return 0;
-    });
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -80,51 +66,67 @@ export default function Herramientas() {
                 </TouchableOpacity>
             </View>
 
+            {/* INDICADOR DE CARGA */}
+            {isLoading && (
+                <View style={{ padding: 30, alignItems: "center" }}>
+                    <ActivityIndicator size="large" color="#8b5cf6" />
+                    <Text style={{ marginTop: 10, color: "#64748b" }}>Buscando herramientas exactas...</Text>
+                </View>
+            )}
+
             {/* RESULTADOS DE BÚSQUEDA */}
             {hasSearched && (
                 <View style={styles.resultsContainer}>
                     <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
-                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas recomendadas</Text>
-
-                    {/* FILTROS */}
-                    <View style={styles.filtersWrapper}>
-                        <View style={styles.filterGroup}>
-                            <Text style={styles.filterLabel}>Ordenar por:</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                                {["Precio", "Calidad", "Nombre"].map((ord) => (
-                                    <TouchableOpacity
-                                        key={ord}
-                                        style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
-                                        onPress={() => setOrderFilter(ord as any)}
-                                    >
-                                        <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    </View>
+                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas reales recomendadas</Text>
 
                     {/* LISTA DE RESULTADOS */}
                     <View style={styles.listContainer}>
-                        {sortedResults.map((item) => (
-                            <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => openLink(item.url)}>
-                                <Image source={{ uri: item.image }} style={styles.resultImage} />
-                                <View style={styles.resultInfo}>
-                                    <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
-                                    <Text style={styles.resultStore}>{item.store}</Text>
-                                    <View style={styles.priceRow}>
-                                        <Text style={styles.resultPrice}>{item.price}</Text>
-                                        <View style={styles.ratingBox}>
-                                            <Ionicons name="star" size={12} color="#f59e0b" />
-                                            <Text style={styles.ratingText}>{item.rating}</Text>
+                        {results.length === 0 ? (
+                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron herramientas específicas. Intenta usar términos más generales.</Text>
+                        ) : (
+                            results.map((item, index) => {
+                                const imageSrc = item.pagemap?.cse_image?.[0]?.src || "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=150";
+
+                                const cardContent = (
+                                    <>
+                                        <Image source={{ uri: imageSrc }} style={styles.resultImage} />
+                                        <View style={styles.resultInfo}>
+                                            <Text style={styles.resultName} numberOfLines={2}>{item.title}</Text>
+                                            <View style={styles.resultMetaRow}>
+                                                <Text style={styles.resultStore}>{item.displayLink}</Text>
+                                            </View>
+                                            <Text style={{ fontSize: 12, color: "#64748b", marginTop: 4 }} numberOfLines={2}>{item.snippet}</Text>
                                         </View>
-                                    </View>
-                                </View>
-                                <View style={styles.chevronBox}>
-                                    <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                </View>
-                            </TouchableOpacity>
-                        ))}
+                                        <View style={styles.chevronBox}>
+                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                                        </View>
+                                    </>
+                                );
+
+                                if (Platform.OS === 'web') {
+                                    return (
+                                        <a
+                                            key={index}
+                                            href={item.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ textDecoration: 'none', display: 'flex' }}
+                                        >
+                                            <View style={[styles.resultCard, { flex: 1 }]}>
+                                                {cardContent}
+                                            </View>
+                                        </a>
+                                    );
+                                }
+
+                                return (
+                                    <TouchableOpacity key={index} style={styles.resultCard} onPress={() => openLink(item.link)}>
+                                        {cardContent}
+                                    </TouchableOpacity>
+                                );
+                            })
+                        )}
                     </View>
                 </View>
             )}
@@ -164,18 +166,6 @@ const styles = StyleSheet.create({
     // Results
     resultsContainer: { borderTopWidth: 2, borderTopColor: "#e2e8f0", paddingTop: 20 },
     resultsTitle: { fontSize: 18, fontWeight: "bold", color: "#0f172a", marginBottom: 16 },
-    filtersWrapper: { marginBottom: 16, gap: 12 },
-    filterGroup: { gap: 6 },
-    filterLabel: { fontSize: 13, fontWeight: "600", color: "#64748b" },
-    filterScroll: { gap: 8, paddingRight: 20 },
-    filterPill: {
-        paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-        backgroundColor: "#f1f5f9", borderWidth: 1, borderColor: "#e2e8f0"
-    },
-    filterPillActive: { backgroundColor: "#8b5cf6", borderColor: "#6d28d9" },
-    filterPillText: { fontSize: 13, color: "#64748b", fontWeight: "500" },
-    filterPillTextActive: { color: "#ffffff", fontWeight: "bold" },
-
     listContainer: { gap: 12 },
     resultCard: {
         flexDirection: "row", backgroundColor: "#ffffff", borderRadius: 12, overflow: "hidden",
@@ -185,10 +175,7 @@ const styles = StyleSheet.create({
     resultImage: { width: 70, height: 70, borderRadius: 8, backgroundColor: "#f1f5f9" },
     resultInfo: { flex: 1, marginLeft: 12, justifyContent: "center" },
     resultName: { fontSize: 14, fontWeight: "bold", color: "#0f172a", marginBottom: 4 },
-    resultStore: { fontSize: 12, color: "#64748b", fontWeight: "600", marginBottom: 6 },
-    priceRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-    resultPrice: { fontSize: 16, fontWeight: "bold", color: "#10b981" },
-    ratingBox: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fef3c7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-    ratingText: { fontSize: 11, color: "#b45309", fontWeight: "bold" },
+    resultMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 0 },
+    resultStore: { fontSize: 12, color: "#64748b", fontWeight: "600", marginBottom: 0 },
     chevronBox: { paddingLeft: 10 }
 });

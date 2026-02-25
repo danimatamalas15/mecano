@@ -19,9 +19,16 @@ export default async function handler(request: Request) {
     const { searchParams } = new URL(request.url);
     const vehiculo = searchParams.get('vehiculo');
     const repuesto = searchParams.get('repuesto');
+    const herramienta = searchParams.get('herramienta');
 
-    if (!vehiculo || !repuesto) {
-        return new Response(JSON.stringify({ error: 'Faltan parámetros (vehiculo y/o repuesto)' }), {
+    let query = '';
+
+    if (vehiculo && repuesto) {
+        query = `comprar ${repuesto} para ${vehiculo}`;
+    } else if (herramienta) {
+        query = `comprar herramienta ${herramienta}`;
+    } else {
+        return new Response(JSON.stringify({ error: 'Faltan parámetros de búsqueda válidos (vehiculo/repuesto, o herramienta)' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -37,7 +44,6 @@ export default async function handler(request: Request) {
         });
     }
 
-    const query = `comprar ${repuesto} para ${vehiculo}`;
     const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=10`;
 
     try {
