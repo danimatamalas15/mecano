@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         });
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
         return new Response(JSON.stringify({ error: 'API Key de Google Maps no configurada en el backend' }), {

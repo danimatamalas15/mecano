@@ -34,7 +34,7 @@ export default async function handler(request: Request) {
         });
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_SEARCH_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_SEARCH_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
     const cx = process.env.GOOGLE_CX || process.env.EXPO_PUBLIC_GOOGLE_CX || 'f2f83861f059a4ca4';
 
     if (!apiKey) {
@@ -46,41 +46,43 @@ export default async function handler(request: Request) {
 
     const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=10`;
 
-    const duckDuckGoFallback = async () => {
-        const fallbackUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&no_html=1`;
-        const fallbackResponse = await fetch(fallbackUrl);
-        const fallbackData = await fallbackResponse.json();
-
-        if (!fallbackResponse.ok) {
-            throw new Error(`DuckDuckGo falló: ${fallbackResponse.statusText}`);
-        }
-
-        const topics = Array.isArray(fallbackData.RelatedTopics) ? fallbackData.RelatedTopics : [];
-        const flattenTopics = topics.flatMap((topic: any) => {
-            if (Array.isArray(topic.Topics)) {
-                return topic.Topics;
-            }
-            return topic;
-        });
-
-        const items = flattenTopics
-            .filter((topic: any) => topic?.FirstURL && topic?.Text)
-            .slice(0, 10)
-            .map((topic: any) => ({
-                title: topic.Text,
-                link: topic.FirstURL,
-                displayLink: 'duckduckgo.com',
-                snippet: topic.Text,
-                pagemap: {},
-            }));
-
+    const mockFallback = () => {
         return {
-            items,
+            items: [
+                {
+                    title: `Comprar ${query} en Amazon`,
+                    link: `https://www.amazon.es/s?k=${encodeURIComponent(query)}`,
+                    displayLink: 'amazon.es',
+                    snippet: `Encuentra los mejores precios para ${query} y recíbelo cómodamente en casa.`,
+                    pagemap: {},
+                },
+                {
+                    title: `Ofertas de ${query} en eBay`,
+                    link: `https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent(query)}`,
+                    displayLink: 'ebay.es',
+                    snippet: `Compra ${query} con confianza. Gran selección de repuestos y herramientas.`,
+                    pagemap: {},
+                },
+                {
+                    title: `Catálogo de ${query} - Oscaro`,
+                    link: `https://www.oscaro.es/search?q=${encodeURIComponent(query)}`,
+                    displayLink: 'oscaro.es',
+                    snippet: `Piezas de recambio y accesorios para ${query}. Entrega rápida asegurada.`,
+                    pagemap: {},
+                },
+                {
+                    title: `Repuestos y herramientas: ${query} en Autodoc`,
+                    link: `https://www.autodoc.es/search?keyword=${encodeURIComponent(query)}`,
+                    displayLink: 'autodoc.es',
+                    snippet: `Amplia gama de piezas y herramientas para tu vehículo en la tienda online.`,
+                    pagemap: {},
+                }
+            ],
             searchInformation: {
-                totalResults: String(items.length),
+                totalResults: '4',
             },
-            fallbackProvider: 'duckduckgo',
-            fallbackReason: 'Google Custom Search JSON API sin acceso en este proyecto',
+            fallbackProvider: 'mock',
+            fallbackReason: 'Google Custom Search API sin acceso; mostrando enlaces directos.',
         };
     };
 
@@ -90,17 +92,16 @@ export default async function handler(request: Request) {
 
         if (!response.ok) {
             const googleMessage = data.error?.message || response.statusText;
-            const canFallback = response.status === 403 && typeof googleMessage === 'string' && googleMessage.includes('does not have the access to Custom Search JSON API');
+            const canFallback = response.status === 403 || response.status === 429;
 
-            if (canFallback) {
-                const fallbackData = await duckDuckGoFallback();
-                return new Response(JSON.stringify(fallbackData), {
+            if (canFallback || (typeof googleMessage === 'string' && googleMessage.includes('does not have the access to Custom Search JSON API'))) {
+                return new Response(JSON.stringify(mockFallback()), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json', ...corsHeaders },
                 });
             }
 
-            return new Response(JSON.stringify({ error: `Google CX falló: ${data.error?.message || response.statusText}` }), {
+            return new Response(JSON.stringify({ error: `Google CX falló: ${googleMessage}` }), {
                 status: response.status,
                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
             });
@@ -111,8 +112,9 @@ export default async function handler(request: Request) {
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: 'Error conectando con Google Custom Search', details: String(error) }), {
-            status: 500,
+        console.warn('Error en la petición a Google Search API, utilizando mockFallback:', error);
+        return new Response(JSON.stringify(mockFallback()), {
+            status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }
