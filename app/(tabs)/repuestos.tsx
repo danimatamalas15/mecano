@@ -1,15 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 
 export default function Repuestos() {
     const [hasSearched, setHasSearched] = useState(false);
-    const [vehicleQuery, setVehicleQuery] = useState("");
+    const [marca, setMarca] = useState("");
+    const [modelo, setModelo] = useState("");
+    const [version, setVersion] = useState("");
+    const [motor, setMotor] = useState("");
+    const [ano, setAno] = useState("");
     const [itemQuery, setItemQuery] = useState("");
     const [orderFilter, setOrderFilter] = useState<"Precio" | "Fecha" | "Relevancia">("Precio");
 
     const [isLoading, setIsLoading] = useState(false);
     const [results, setResults] = useState<any[]>([]);
+    const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
 
     const extractPrice = (item: any): number => {
         // Intentar parsear precio del pagemap offer o product
@@ -42,8 +48,8 @@ export default function Repuestos() {
     };
 
     const handleSearch = async () => {
-        if (!vehicleQuery.trim() || !itemQuery.trim()) {
-            alert("Por favor, rellena el vehículo y el repuesto que buscas.");
+        if (!marca.trim() || !modelo.trim() || !itemQuery.trim()) {
+            alert("Por favor, rellena al menos la Marca, el Modelo y el repuesto que buscas.");
             return;
         }
 
@@ -53,9 +59,15 @@ export default function Repuestos() {
 
         try {
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            const relativeUrl = `${baseUrl}/api/buscar?vehiculo=${encodeURIComponent(vehicleQuery)}&repuesto=${encodeURIComponent(itemQuery)}`;
+            const relativeUrl = `${baseUrl}/api/buscar?marca=${encodeURIComponent(marca)}&modelo=${encodeURIComponent(modelo)}&version=${encodeURIComponent(version)}&motor=${encodeURIComponent(motor)}&ano=${encodeURIComponent(ano)}&repuesto=${encodeURIComponent(itemQuery)}`;
 
-            const response = await fetch(relativeUrl);
+            const youtubeQuery = `como cambiar ${itemQuery} en ${marca} ${modelo} ${motor} ${ano}`.trim();
+
+            const [response, videosData] = await Promise.all([
+                fetch(relativeUrl),
+                fetchYouTubeVideos(youtubeQuery)
+            ]);
+
             const data = await response.json();
 
             if (response.ok && data.items) {
@@ -65,6 +77,7 @@ export default function Repuestos() {
             } else {
                 setResults([]);
             }
+            setYoutubeVideos(videosData);
             setOrderFilter("Precio");
             setHasSearched(true);
         } catch (error) {
@@ -98,10 +111,30 @@ export default function Repuestos() {
             {/* FORMULARIO DE BÚSQUEDA */}
             <View style={styles.formContainer}>
                 <View style={styles.section}>
-                    <Text style={styles.label}>1. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
-                    <View style={styles.searchContainer}>
-                        <Ionicons name="car-outline" size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput style={styles.searchInput} placeholder="Ej: Ford Focus 2015..." placeholderTextColor="#94a3b8" value={vehicleQuery} onChangeText={setVehicleQuery} />
+                    <Text style={styles.label}>1. Vehículo - introduce los datos:</Text>
+
+                    <View style={styles.row}>
+                        <View style={[styles.searchContainer, { flex: 1, marginRight: 8 }]}>
+                            <TextInput style={styles.searchInput} placeholder="Marca (ej. Ford)" placeholderTextColor="#94a3b8" value={marca} onChangeText={setMarca} />
+                        </View>
+                        <View style={[styles.searchContainer, { flex: 1 }]}>
+                            <TextInput style={styles.searchInput} placeholder="Modelo (ej. Focus)" placeholderTextColor="#94a3b8" value={modelo} onChangeText={setModelo} />
+                        </View>
+                    </View>
+
+                    <View style={[styles.row, { marginTop: 10 }]}>
+                        <View style={[styles.searchContainer, { flex: 1, marginRight: 8 }]}>
+                            <TextInput style={styles.searchInput} placeholder="Versión (ej. Titanium)" placeholderTextColor="#94a3b8" value={version} onChangeText={setVersion} />
+                        </View>
+                        <View style={[styles.searchContainer, { flex: 1 }]}>
+                            <TextInput style={styles.searchInput} placeholder="Motor (ej. 1.5 TDCi)" placeholderTextColor="#94a3b8" value={motor} onChangeText={setMotor} />
+                        </View>
+                    </View>
+
+                    <View style={[styles.row, { marginTop: 10 }]}>
+                        <View style={[styles.searchContainer, { flex: 1 }]}>
+                            <TextInput style={styles.searchInput} placeholder="Año de fabricación (ej. 2015)" placeholderTextColor="#94a3b8" value={ano} onChangeText={setAno} keyboardType="numeric" />
+                        </View>
                     </View>
                 </View>
 
@@ -131,9 +164,29 @@ export default function Repuestos() {
             {hasSearched && (
                 <View style={styles.resultsContainer}>
                     <Text style={styles.resultsTitle}>Mejores Resultados para "{itemQuery}"</Text>
-                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {vehicleQuery}</Text>
+                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {marca} {modelo} {version} {motor} {ano}</Text>
 
-                    {/* FILTROS */}
+                    {/* VIDEOS DE INSTALACION */}
+                    <View style={styles.videosSection}>
+                        <Text style={styles.sectionSubtitle}>Vídeos de Instalación</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 10 }}>
+                            {youtubeVideos.map(video => (
+                                <TouchableOpacity
+                                    key={video.id}
+                                    style={styles.videoCard}
+                                    onPress={() => openLink(video.url)}
+                                >
+                                    <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
+                                    <View style={styles.videoInfo}>
+                                        <Text style={styles.videoTitle} numberOfLines={2}>{video.title}</Text>
+                                        <Text style={styles.videoMeta}>{video.views} • {video.lang}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+
+                    {/* FILTROS TIENDAS */}
                     <View style={styles.filtersWrapper}>
                         <View style={styles.filterGroup}>
                             <Text style={styles.filterLabel}>Ordenar por:</Text>
@@ -214,6 +267,7 @@ const styles = StyleSheet.create({
     content: { padding: 20, paddingBottom: 40 },
     formContainer: { marginBottom: 20 },
     section: { marginBottom: 16 },
+    row: { flexDirection: 'row' },
     label: { fontSize: 15, fontWeight: "600", color: "#1e293b", marginBottom: 8 },
     dropdown: {
         backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10,
@@ -264,5 +318,17 @@ const styles = StyleSheet.create({
     resultMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
     resultStore: { fontSize: 12, color: "#64748b", fontWeight: "600" },
     resultPrice: { fontSize: 16, fontWeight: "bold", color: "#10b981", marginTop: 2 },
-    chevronBox: { paddingLeft: 10 }
+    chevronBox: { paddingLeft: 10 },
+
+    // Videos
+    videosSection: { marginBottom: 20 },
+    sectionSubtitle: { fontSize: 16, fontWeight: "bold", color: "#1e293b", marginBottom: 10 },
+    videoCard: {
+        width: 160, backgroundColor: "#fff", borderRadius: 12, overflow: "hidden",
+        borderWidth: 1, borderColor: "#e2e8f0", elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4
+    },
+    videoThumbnail: { width: "100%", height: 90, backgroundColor: "#f1f5f9" },
+    videoInfo: { padding: 10 },
+    videoTitle: { fontSize: 12, fontWeight: "bold", color: "#0f172a", marginBottom: 4, lineHeight: 16 },
+    videoMeta: { fontSize: 10, color: "#64748b" }
 });

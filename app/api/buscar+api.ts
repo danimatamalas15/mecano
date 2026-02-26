@@ -6,14 +6,18 @@ export async function GET(request: Request) {
     };
 
     const { searchParams } = new URL(request.url);
-    const vehiculo = searchParams.get('vehiculo');
+    const marca = searchParams.get('marca') || '';
+    const modelo = searchParams.get('modelo') || '';
+    const version = searchParams.get('version') || '';
+    const motor = searchParams.get('motor') || '';
+    const ano = searchParams.get('ano') || '';
     const repuesto = searchParams.get('repuesto');
     const herramienta = searchParams.get('herramienta');
 
     let query = '';
 
-    if (vehiculo && repuesto) {
-        query = `comprar ${repuesto} para ${vehiculo}`;
+    if (marca || modelo || repuesto) {
+        query = `comprar ${repuesto} para ${marca} ${modelo} ${version} ${motor} ${ano}`.trim();
     } else if (herramienta) {
         query = `comprar herramienta ${herramienta}`;
     } else {
@@ -33,7 +37,7 @@ export async function GET(request: Request) {
         });
     }
 
-    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=10`;
+    const urlBase = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=10`;
 
     const mockFallback = () => {
         return {
@@ -76,27 +80,50 @@ export async function GET(request: Request) {
     };
 
     try {
-        const response = await fetch(url);
-        const data = await response.json();
+        const starts = [1, 11, 21, 31, 41];
+        let allItems: any[] = [];
+        let hasError = false;
+        let lastResponse: any = null;
+        let lastErrorMsg = '';
+        let lastStatus = 200;
 
-        if (!response.ok) {
-            const googleMessage = data.error?.message || response.statusText;
-            const canFallback = response.status === 403 || response.status === 429;
+        // Peticiones concurrentes limitadas por página
+        const fetchPromises = starts.map(start => fetch(`${urlBase}&start=${start}`));
+        const responses = await Promise.all(fetchPromises);
 
-            if (canFallback || (typeof googleMessage === 'string' && googleMessage.includes('does not have the access to Custom Search JSON API'))) {
+        for (const response of responses) {
+            const data = await response.json();
+
+            if (!response.ok) {
+                hasError = true;
+                lastResponse = data;
+                lastStatus = response.status;
+                lastErrorMsg = data.error?.message || response.statusText;
+                break;
+            }
+
+            if (data.items && data.items.length > 0) {
+                allItems = allItems.concat(data.items);
+            }
+        }
+
+        if (hasError) {
+            const canFallback = lastStatus === 403 || lastStatus === 429;
+
+            if (canFallback || (typeof lastErrorMsg === 'string' && lastErrorMsg.includes('does not have the access to Custom Search JSON API'))) {
                 return new Response(JSON.stringify(mockFallback()), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json', ...corsHeaders },
                 });
             }
 
-            return new Response(JSON.stringify({ error: `Google CX falló: ${googleMessage}` }), {
-                status: response.status,
+            return new Response(JSON.stringify({ error: `Google CX falló: ${lastErrorMsg}` }), {
+                status: lastStatus,
                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
             });
         }
 
-        return new Response(JSON.stringify(data), {
+        return new Response(JSON.stringify({ items: allItems }), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
