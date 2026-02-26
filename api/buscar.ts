@@ -46,11 +46,60 @@ export default async function handler(request: Request) {
 
     const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=10`;
 
+    const duckDuckGoFallback = async () => {
+        const fallbackUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&no_html=1`;
+        const fallbackResponse = await fetch(fallbackUrl);
+        const fallbackData = await fallbackResponse.json();
+
+        if (!fallbackResponse.ok) {
+            throw new Error(`DuckDuckGo falló: ${fallbackResponse.statusText}`);
+        }
+
+        const topics = Array.isArray(fallbackData.RelatedTopics) ? fallbackData.RelatedTopics : [];
+        const flattenTopics = topics.flatMap((topic: any) => {
+            if (Array.isArray(topic.Topics)) {
+                return topic.Topics;
+            }
+            return topic;
+        });
+
+        const items = flattenTopics
+            .filter((topic: any) => topic?.FirstURL && topic?.Text)
+            .slice(0, 10)
+            .map((topic: any) => ({
+                title: topic.Text,
+                link: topic.FirstURL,
+                displayLink: 'duckduckgo.com',
+                snippet: topic.Text,
+                pagemap: {},
+            }));
+
+        return {
+            items,
+            searchInformation: {
+                totalResults: String(items.length),
+            },
+            fallbackProvider: 'duckduckgo',
+            fallbackReason: 'Google Custom Search JSON API sin acceso en este proyecto',
+        };
+    };
+
     try {
         const response = await fetch(url);
         const data = await response.json();
 
         if (!response.ok) {
+            const googleMessage = data.error?.message || response.statusText;
+            const canFallback = response.status === 403 && typeof googleMessage === 'string' && googleMessage.includes('does not have the access to Custom Search JSON API');
+
+            if (canFallback) {
+                const fallbackData = await duckDuckGoFallback();
+                return new Response(JSON.stringify(fallbackData), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                });
+            }
+
             return new Response(JSON.stringify({ error: `Google CX falló: ${data.error?.message || response.statusText}` }), {
                 status: response.status,
                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
