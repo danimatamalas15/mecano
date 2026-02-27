@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import GoogleSearchWidget from "../components/GoogleSearchWidget";
 
 export default function Herramientas() {
@@ -25,50 +25,57 @@ export default function Herramientas() {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-            {/* FORMULARIO DE BÚSQUEDA */}
-            <View style={styles.formContainer}>
-                <View style={styles.section}>
-                    <Text style={styles.label}>1. ¿Qué herramienta necesitas?</Text>
-                    <View style={styles.searchContainer}>
-                        <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput style={styles.searchInput} placeholder="Ej: Llave dinamométrica..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
+                {/* FORMULARIO DE BÚSQUEDA */}
+                <View style={styles.formContainer}>
+                    <View style={styles.section}>
+                        <Text style={styles.label}>1. ¿Qué herramienta necesitas?</Text>
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                            <TextInput style={styles.searchInput} placeholder="Ej: Llave dinamométrica..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
+                        </View>
                     </View>
+
+                    <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
+                        <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.submitButtonText}>BUSCAR HERRAMIENTAS</Text>
+                    </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
-                    <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.submitButtonText}>BUSCAR HERRAMIENTAS</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* INDICADOR DE CARGA */}
-            {isLoading && (
-                <View style={{ padding: 30, alignItems: "center" }}>
-                    <ActivityIndicator size="large" color="#8b5cf6" />
-                    <Text style={{ marginTop: 10, color: "#64748b" }}>Buscando herramientas exactas...</Text>
-                </View>
-            )}
-
-            {/* RESULTADOS DE BÚSQUEDA */}
-            {hasSearched && (
-                <View style={styles.resultsContainer}>
-                    <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
-                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas reales recomendadas</Text>
-
-                    {/* LISTA DE RESULTADOS DEL BUSCADOR PROGRAMABLE G CSE */}
-                    <View style={styles.listContainer}>
-                        <GoogleSearchWidget query={`comprar herramienta ${itemQuery}`} />
+                {/* INDICADOR DE CARGA */}
+                {isLoading && (
+                    <View style={{ padding: 30, alignItems: "center" }}>
+                        <ActivityIndicator size="large" color="#8b5cf6" />
+                        <Text style={{ marginTop: 10, color: "#64748b" }}>Buscando herramientas exactas...</Text>
                     </View>
-                </View>
-            )}
+                )}
 
-        </ScrollView>
+                {/* RESULTADOS DE BÚSQUEDA */}
+                {hasSearched && (
+                    <View style={styles.resultsContainer}>
+                        <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
+                        <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas reales recomendadas</Text>
+
+                        {/* LISTA DE RESULTADOS DEL BUSCADOR PROGRAMABLE G CSE */}
+                        <View style={styles.listContainer}>
+                            <GoogleSearchWidget query={`comprar herramienta ${itemQuery}`} />
+                        </View>
+                    </View>
+                )}
+
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#f8fafc",
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
     formContainer: { marginBottom: 20 },

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const MENU_ITEMS = [
     { href: "/diagnostico", title: "DIAGNÓSTICO", icon: "build-outline", desc: "Síntomas y averías" },
@@ -13,27 +13,39 @@ const MENU_ITEMS = [
 
 export default function Home() {
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <Text style={styles.welcomeText}>¿Qué necesitas hoy?</Text>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-            <View style={styles.grid}>
-                {MENU_ITEMS.map((item, index) => (
-                    <Link href={item.href as any} key={index} asChild>
-                        <TouchableOpacity style={styles.card} activeOpacity={0.8}>
-                            <View style={styles.iconContainer}>
-                                <Ionicons name={item.icon as any} size={40} color="#3b82f6" />
-                            </View>
-                            <Text style={styles.cardTitle}>{item.title}</Text>
-                            <Text style={styles.cardDesc}>{item.desc}</Text>
-                        </TouchableOpacity>
-                    </Link>
-                ))}
-            </View>
-        </ScrollView>
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logoText3D}>iAUTO-BOX</Text>
+                </View>
+
+                <Text style={styles.welcomeText}>¿Qué necesitas hoy?</Text>
+
+                <View style={styles.grid}>
+                    {MENU_ITEMS.map((item, index) => (
+                        <Link href={item.href as any} key={index} asChild>
+                            <TouchableOpacity style={styles.card} activeOpacity={0.8}>
+                                <View style={styles.iconContainer}>
+                                    <Ionicons name={item.icon as any} size={40} color="#3b82f6" />
+                                </View>
+                                <Text style={styles.cardTitle}>{item.title}</Text>
+                                <Text style={styles.cardDesc}>{item.desc}</Text>
+                            </TouchableOpacity>
+                        </Link>
+                    ))}
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#f8fafc",
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: {
         flex: 1,
         backgroundColor: "#f8fafc",
@@ -41,6 +53,21 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
         paddingBottom: 40,
+    },
+    logoContainer: {
+        alignItems: "center",
+        marginTop: 20,
+        marginBottom: 30,
+    },
+    logoText3D: {
+        fontSize: 48,
+        fontWeight: "900",
+        color: "#2563eb", // Azul principal
+        letterSpacing: 2,
+        textShadowColor: "#1e3a8a", // Sombra azul oscura para efecto 3D
+        textShadowOffset: { width: 3, height: 5 },
+        textShadowRadius: 1,
+        transform: [{ perspective: 500 }, { rotateX: '10deg' }], // Ligero efecto de inclinación 3D
     },
     welcomeText: {
         fontSize: 24,

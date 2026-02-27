@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
+import { saveSearchToHistory } from "../utils/history";
 
 export default function Repuestos() {
     const [hasSearched, setHasSearched] = useState(false);
@@ -80,6 +81,8 @@ export default function Repuestos() {
             setYoutubeVideos(videosData);
             setOrderFilter("Precio");
             setHasSearched(true);
+
+            saveSearchToHistory("Repuestos", `${marca} ${modelo} ${ano}: ${itemQuery}`.substring(0, 60), "settings");
         } catch (error) {
             console.error("Error buscando repuestos:", error);
             alert("Hubo un error de conexión con tu servidor. Inténtalo de nuevo más tarde.");
@@ -106,163 +109,170 @@ export default function Repuestos() {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-            {/* FORMULARIO DE BÚSQUEDA */}
-            <View style={styles.formContainer}>
-                <View style={styles.section}>
-                    <Text style={styles.label}>1. Vehículo - introduce los datos:</Text>
+                {/* FORMULARIO DE BÚSQUEDA */}
+                <View style={styles.formContainer}>
+                    <View style={styles.section}>
+                        <Text style={styles.label}>1. Vehículo - introduce los datos:</Text>
 
-                    <View style={styles.row}>
-                        <View style={[styles.searchContainer, { flex: 1, marginRight: 8 }]}>
-                            <TextInput style={styles.searchInput} placeholder="Marca (ej. Ford)" placeholderTextColor="#94a3b8" value={marca} onChangeText={setMarca} />
+                        <View style={styles.row}>
+                            <View style={[styles.searchContainer, { flex: 1, marginRight: 8 }]}>
+                                <TextInput style={styles.searchInput} placeholder="Marca (ej. Ford)" placeholderTextColor="#94a3b8" value={marca} onChangeText={setMarca} />
+                            </View>
+                            <View style={[styles.searchContainer, { flex: 1 }]}>
+                                <TextInput style={styles.searchInput} placeholder="Modelo (ej. Focus)" placeholderTextColor="#94a3b8" value={modelo} onChangeText={setModelo} />
+                            </View>
                         </View>
-                        <View style={[styles.searchContainer, { flex: 1 }]}>
-                            <TextInput style={styles.searchInput} placeholder="Modelo (ej. Focus)" placeholderTextColor="#94a3b8" value={modelo} onChangeText={setModelo} />
+
+                        <View style={[styles.row, { marginTop: 10 }]}>
+                            <View style={[styles.searchContainer, { flex: 1, marginRight: 8 }]}>
+                                <TextInput style={styles.searchInput} placeholder="Versión (ej. Titanium)" placeholderTextColor="#94a3b8" value={version} onChangeText={setVersion} />
+                            </View>
+                            <View style={[styles.searchContainer, { flex: 1 }]}>
+                                <TextInput style={styles.searchInput} placeholder="Motor (ej. 1.5 TDCi)" placeholderTextColor="#94a3b8" value={motor} onChangeText={setMotor} />
+                            </View>
+                        </View>
+
+                        <View style={[styles.row, { marginTop: 10 }]}>
+                            <View style={[styles.searchContainer, { flex: 1 }]}>
+                                <TextInput style={styles.searchInput} placeholder="Año de fabricación (ej. 2015)" placeholderTextColor="#94a3b8" value={ano} onChangeText={setAno} keyboardType="numeric" />
+                            </View>
                         </View>
                     </View>
 
-                    <View style={[styles.row, { marginTop: 10 }]}>
-                        <View style={[styles.searchContainer, { flex: 1, marginRight: 8 }]}>
-                            <TextInput style={styles.searchInput} placeholder="Versión (ej. Titanium)" placeholderTextColor="#94a3b8" value={version} onChangeText={setVersion} />
-                        </View>
-                        <View style={[styles.searchContainer, { flex: 1 }]}>
-                            <TextInput style={styles.searchInput} placeholder="Motor (ej. 1.5 TDCi)" placeholderTextColor="#94a3b8" value={motor} onChangeText={setMotor} />
+                    <View style={styles.section}>
+                        <Text style={styles.label}>2. ¿Qué repuesto necesitas?</Text>
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                            <TextInput style={styles.searchInput} placeholder="Ej: Filtro de aceite Bosch..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
                         </View>
                     </View>
 
-                    <View style={[styles.row, { marginTop: 10 }]}>
-                        <View style={[styles.searchContainer, { flex: 1 }]}>
-                            <TextInput style={styles.searchInput} placeholder="Año de fabricación (ej. 2015)" placeholderTextColor="#94a3b8" value={ano} onChangeText={setAno} keyboardType="numeric" />
-                        </View>
-                    </View>
+                    <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
+                        <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.submitButtonText}>BUSCAR REPUESTOS</Text>
+                    </TouchableOpacity>
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.label}>2. ¿Qué repuesto necesitas?</Text>
-                    <View style={styles.searchContainer}>
-                        <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput style={styles.searchInput} placeholder="Ej: Filtro de aceite Bosch..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
+                {/* INDICADOR DE CARGA */}
+                {isLoading && (
+                    <View style={{ padding: 30, alignItems: "center" }}>
+                        <ActivityIndicator size="large" color="#f59e0b" />
+                        <Text style={{ marginTop: 10, color: "#64748b" }}>Buscando repuestos exactos...</Text>
                     </View>
-                </View>
+                )}
 
-                <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
-                    <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.submitButtonText}>BUSCAR REPUESTOS</Text>
-                </TouchableOpacity>
-            </View>
+                {/* RESULTADOS DE BÚSQUEDA */}
+                {hasSearched && (
+                    <View style={styles.resultsContainer}>
+                        <Text style={styles.resultsTitle}>Mejores Resultados para "{itemQuery}"</Text>
+                        <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {marca} {modelo} {version} {motor} {ano}</Text>
 
-            {/* INDICADOR DE CARGA */}
-            {isLoading && (
-                <View style={{ padding: 30, alignItems: "center" }}>
-                    <ActivityIndicator size="large" color="#f59e0b" />
-                    <Text style={{ marginTop: 10, color: "#64748b" }}>Buscando repuestos exactos...</Text>
-                </View>
-            )}
-
-            {/* RESULTADOS DE BÚSQUEDA */}
-            {hasSearched && (
-                <View style={styles.resultsContainer}>
-                    <Text style={styles.resultsTitle}>Mejores Resultados para "{itemQuery}"</Text>
-                    <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {marca} {modelo} {version} {motor} {ano}</Text>
-
-                    {/* VIDEOS DE INSTALACION */}
-                    <View style={styles.videosSection}>
-                        <Text style={styles.sectionSubtitle}>Vídeos de Instalación</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 10 }}>
-                            {youtubeVideos.map(video => (
-                                <TouchableOpacity
-                                    key={video.id}
-                                    style={styles.videoCard}
-                                    onPress={() => openLink(video.url)}
-                                >
-                                    <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
-                                    <View style={styles.videoInfo}>
-                                        <Text style={styles.videoTitle} numberOfLines={2}>{video.title}</Text>
-                                        <Text style={styles.videoMeta}>{video.views} • {video.lang}</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* FILTROS TIENDAS */}
-                    <View style={styles.filtersWrapper}>
-                        <View style={styles.filterGroup}>
-                            <Text style={styles.filterLabel}>Ordenar por:</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                                {["Precio", "Fecha", "Relevancia"].map((ord) => (
+                        {/* VIDEOS DE INSTALACION */}
+                        <View style={styles.videosSection}>
+                            <Text style={styles.sectionSubtitle}>Vídeos de Instalación</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 10 }}>
+                                {youtubeVideos.map(video => (
                                     <TouchableOpacity
-                                        key={ord}
-                                        style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
-                                        onPress={() => setOrderFilter(ord as any)}
+                                        key={video.id}
+                                        style={styles.videoCard}
+                                        onPress={() => openLink(video.url)}
                                     >
-                                        <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
+                                        <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
+                                        <View style={styles.videoInfo}>
+                                            <Text style={styles.videoTitle} numberOfLines={2}>{video.title}</Text>
+                                            <Text style={styles.videoMeta}>{video.views} • {video.lang}</Text>
+                                        </View>
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>
                         </View>
-                    </View>
 
-                    {/* LISTA DE RESULTADOS */}
-                    <View style={styles.listContainer}>
-                        {sortedResults.length === 0 ? (
-                            <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos específicos. Intenta usar términos más generales.</Text>
-                        ) : (
-                            sortedResults.map((item, index) => {
-                                const imageSrc = item.pagemap?.cse_image?.[0]?.src || "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150";
-                                const price = extractPrice(item);
-                                const displayPrice = price !== Infinity ? `${price.toFixed(2)} €` : 'Ver web';
-
-                                const cardContent = (
-                                    <>
-                                        <Image source={{ uri: imageSrc }} style={styles.resultImage} />
-                                        <View style={styles.resultInfo}>
-                                            <Text style={styles.resultName} numberOfLines={2}>{item.title}</Text>
-                                            <View style={styles.resultMetaRow}>
-                                                <Text style={styles.resultStore} numberOfLines={1}>{item.displayLink}</Text>
-                                            </View>
-                                            <Text style={styles.resultPrice}>{displayPrice}</Text>
-                                            <Text style={{ fontSize: 12, color: "#64748b", marginTop: 4 }} numberOfLines={2}>{item.snippet}</Text>
-                                        </View>
-                                        <View style={styles.chevronBox}>
-                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                        </View>
-                                    </>
-                                );
-
-                                if (Platform.OS === 'web') {
-                                    return (
-                                        <a
-                                            key={index}
-                                            href={item.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{ textDecoration: 'none', display: 'flex' }}
+                        {/* FILTROS TIENDAS */}
+                        <View style={styles.filtersWrapper}>
+                            <View style={styles.filterGroup}>
+                                <Text style={styles.filterLabel}>Ordenar por:</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                                    {["Precio", "Fecha", "Relevancia"].map((ord) => (
+                                        <TouchableOpacity
+                                            key={ord}
+                                            style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
+                                            onPress={() => setOrderFilter(ord as any)}
                                         >
-                                            <View style={[styles.resultCard, { flex: 1 }]}>
-                                                {cardContent}
+                                            <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </View>
+
+                        {/* LISTA DE RESULTADOS */}
+                        <View style={styles.listContainer}>
+                            {sortedResults.length === 0 ? (
+                                <Text style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>No se encontraron repuestos específicos. Intenta usar términos más generales.</Text>
+                            ) : (
+                                sortedResults.map((item, index) => {
+                                    const imageSrc = item.pagemap?.cse_image?.[0]?.src || "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=150";
+                                    const price = extractPrice(item);
+                                    const displayPrice = price !== Infinity ? `${price.toFixed(2)} €` : 'Ver web';
+
+                                    const cardContent = (
+                                        <>
+                                            <Image source={{ uri: imageSrc }} style={styles.resultImage} />
+                                            <View style={styles.resultInfo}>
+                                                <Text style={styles.resultName} numberOfLines={2}>{item.title}</Text>
+                                                <View style={styles.resultMetaRow}>
+                                                    <Text style={styles.resultStore} numberOfLines={1}>{item.displayLink}</Text>
+                                                </View>
+                                                <Text style={styles.resultPrice}>{displayPrice}</Text>
+                                                <Text style={{ fontSize: 12, color: "#64748b", marginTop: 4 }} numberOfLines={2}>{item.snippet}</Text>
                                             </View>
-                                        </a>
+                                            <View style={styles.chevronBox}>
+                                                <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                                            </View>
+                                        </>
                                     );
-                                }
 
-                                return (
-                                    <TouchableOpacity key={index} style={styles.resultCard} onPress={() => openLink(item.link)}>
-                                        {cardContent}
-                                    </TouchableOpacity>
-                                );
-                            })
-                        )}
+                                    if (Platform.OS === 'web') {
+                                        return (
+                                            <a
+                                                key={index}
+                                                href={item.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ textDecoration: 'none', display: 'flex' }}
+                                            >
+                                                <View style={[styles.resultCard, { flex: 1 }]}>
+                                                    {cardContent}
+                                                </View>
+                                            </a>
+                                        );
+                                    }
+
+                                    return (
+                                        <TouchableOpacity key={index} style={styles.resultCard} onPress={() => openLink(item.link)}>
+                                            {cardContent}
+                                        </TouchableOpacity>
+                                    );
+                                })
+                            )}
+                        </View>
                     </View>
-                </View>
-            )}
+                )}
 
-        </ScrollView>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#f8fafc",
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
     formContainer: { marginBottom: 20 },

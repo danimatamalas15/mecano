@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
 import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
+import { saveSearchToHistory } from "../utils/history";
 
 export default function Diagnostico() {
     const [vehicleType, setVehicleType] = useState<"Auto" | "Moto" | null>(null);
@@ -58,6 +59,10 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                 setForums([]);
             }
             setHasSearched(true);
+
+            // Guardar historial
+            saveSearchToHistory("Diagnóstico", `${searchQuery.trim()}: ${symptoms.trim()}`.substring(0, 60), "build");
+
         } catch (error) {
             console.error("Error en diagnostico:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from 'expo-location';
 import { useState } from "react";
-import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { saveSearchToHistory } from "../utils/history";
 
 type TallerType = "Mecánica" | "Chapa" | "Electrónica" | "Neumáticos";
 
@@ -210,6 +211,9 @@ export default function Talleres() {
                 }
                 setOrderFilter("Proximidad");
                 setHasSearched(true);
+
+                const queryDesc = showManualFallback && manualAddress.trim() !== '' ? manualAddress : "Ubicación GPS";
+                saveSearchToHistory("Talleres", `${tallerType} en ${queryDesc}`.substring(0, 60), "car");
             }
         } catch (error) {
             setLocationError("Ocurrió un error al procesar la ubicación.");
@@ -230,128 +234,135 @@ export default function Talleres() {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-            {/* FORMULARIO */}
-            <View style={styles.formContainer}>
-                <View style={styles.section}>
-                    <Text style={styles.label}>1. Tipo de Taller</Text>
-                    <View style={styles.grid}>
-                        {TALLERES.map((taller) => (
-                            <TouchableOpacity
-                                key={taller.type}
-                                style={[styles.gridButton, tallerType === taller.type && styles.gridButtonActive]}
-                                onPress={() => setTallerType(taller.type)}
-                            >
-                                <Ionicons name={taller.icon} size={24} color={tallerType === taller.type ? "#fff" : "#3b82f6"} style={styles.gridIcon} />
-                                <Text style={[styles.gridButtonText, tallerType === taller.type && styles.gridTextActive]}>{taller.type}</Text>
-                            </TouchableOpacity>
-                        ))}
+                {/* FORMULARIO */}
+                <View style={styles.formContainer}>
+                    <View style={styles.section}>
+                        <Text style={styles.label}>1. Tipo de Taller</Text>
+                        <View style={styles.grid}>
+                            {TALLERES.map((taller) => (
+                                <TouchableOpacity
+                                    key={taller.type}
+                                    style={[styles.gridButton, tallerType === taller.type && styles.gridButtonActive]}
+                                    onPress={() => setTallerType(taller.type)}
+                                >
+                                    <Ionicons name={taller.icon} size={24} color={tallerType === taller.type ? "#fff" : "#3b82f6"} style={styles.gridIcon} />
+                                    <Text style={[styles.gridButtonText, tallerType === taller.type && styles.gridTextActive]}>{taller.type}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
+
+                    <View style={styles.divider} />
+
+                    {showManualFallback && (
+                        <View style={styles.section}>
+                            <View style={styles.searchContainer}>
+                                <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Ej: Palma de Mallorca, CP 07001..."
+                                    placeholderTextColor="#94a3b8"
+                                    value={manualAddress}
+                                    onChangeText={setManualAddress}
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
+
+                    <TouchableOpacity style={styles.submitButton} onPress={handleSearch} disabled={isLoadingLocation}>
+                        {isLoadingLocation ? (
+                            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                        ) : (
+                            <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        )}
+                        <Text style={styles.submitButtonText}>{isLoadingLocation ? "BUSCANDO..." : "BUSCAR TALLERES"}</Text>
+                    </TouchableOpacity>
                 </View>
 
-                <View style={styles.divider} />
+                {/* RESULTADOS DE BÚSQUEDA */}
+                {hasSearched && (
+                    <View style={styles.resultsContainer}>
+                        <Text style={styles.resultsTitle}>Talleres Cercanos</Text>
 
-                {showManualFallback && (
-                    <View style={styles.section}>
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Ej: Palma de Mallorca, CP 07001..."
-                                placeholderTextColor="#94a3b8"
-                                value={manualAddress}
-                                onChangeText={setManualAddress}
-                            />
+                        {/* FILTROS */}
+                        <View style={styles.filtersWrapper}>
+                            <Text style={styles.filterLabel}>Ordenar por:</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                                {["Proximidad", "Calificación en Google"].map((ord) => (
+                                    <TouchableOpacity
+                                        key={ord}
+                                        style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
+                                        onPress={() => setOrderFilter(ord as any)}
+                                    >
+                                        <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        {/* LISTA DE RESULTADOS */}
+                        <View style={styles.listContainer}>
+                            {
+                                mockResults
+                                    .map((taller) => {
+                                        const distKm = searchCenter ? calculateDistance(searchCenter.lat, searchCenter.lon, taller.lat, taller.lon) : 0;
+                                        return { ...taller, distValue: distKm, distanceText: distKm.toFixed(1) + " km" };
+                                    })
+                                    // Ordenar
+                                    .sort((a, b) => {
+                                        if (orderFilter === "Proximidad") {
+                                            return a.distValue - b.distValue;
+                                        } else {
+                                            return parseFloat(b.rating) - parseFloat(a.rating);
+                                        }
+                                    })
+                                    .map((item) => (
+                                        <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => handleOpenMap(item.url)}>
+                                            <View style={styles.iconContainer}>
+                                                <Ionicons name="car-sport" size={28} color="#ef4444" />
+                                            </View>
+                                            <View style={styles.resultInfo}>
+                                                <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
+                                                <Text style={styles.resultAddress} numberOfLines={1}>{item.address}</Text>
+
+                                                <View style={styles.metaRow}>
+                                                    <View style={styles.distanceBadge}>
+                                                        <Ionicons name="location" size={12} color="#0284c7" />
+                                                        <Text style={styles.distanceText}>{item.distanceText}</Text>
+                                                    </View>
+                                                    <View style={styles.ratingBox}>
+                                                        <Text style={styles.ratingText}>{item.rating} </Text>
+                                                        <StarRating rating={item.rating} />
+                                                        <Text style={styles.reviewsText}>({item.reviews})</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                            <View style={styles.chevronBox}>
+                                                <Ionicons name="navigate-circle-outline" size={28} color="#3b82f6" />
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))
+                            }
                         </View>
                     </View>
                 )}
 
-                {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
-
-                <TouchableOpacity style={styles.submitButton} onPress={handleSearch} disabled={isLoadingLocation}>
-                    {isLoadingLocation ? (
-                        <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                    ) : (
-                        <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
-                    )}
-                    <Text style={styles.submitButtonText}>{isLoadingLocation ? "BUSCANDO..." : "BUSCAR TALLERES"}</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* RESULTADOS DE BÚSQUEDA */}
-            {hasSearched && (
-                <View style={styles.resultsContainer}>
-                    <Text style={styles.resultsTitle}>Talleres Cercanos</Text>
-
-                    {/* FILTROS */}
-                    <View style={styles.filtersWrapper}>
-                        <Text style={styles.filterLabel}>Ordenar por:</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                            {["Proximidad", "Calificación en Google"].map((ord) => (
-                                <TouchableOpacity
-                                    key={ord}
-                                    style={[styles.filterPill, orderFilter === ord && styles.filterPillActive]}
-                                    onPress={() => setOrderFilter(ord as any)}
-                                >
-                                    <Text style={[styles.filterPillText, orderFilter === ord && styles.filterPillTextActive]}>{ord}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* LISTA DE RESULTADOS */}
-                    <View style={styles.listContainer}>
-                        {
-                            mockResults
-                                .map((taller) => {
-                                    const distKm = searchCenter ? calculateDistance(searchCenter.lat, searchCenter.lon, taller.lat, taller.lon) : 0;
-                                    return { ...taller, distValue: distKm, distanceText: distKm.toFixed(1) + " km" };
-                                })
-                                // Ordenar
-                                .sort((a, b) => {
-                                    if (orderFilter === "Proximidad") {
-                                        return a.distValue - b.distValue;
-                                    } else {
-                                        return parseFloat(b.rating) - parseFloat(a.rating);
-                                    }
-                                })
-                                .map((item) => (
-                                    <TouchableOpacity key={item.id} style={styles.resultCard} onPress={() => handleOpenMap(item.url)}>
-                                        <View style={styles.iconContainer}>
-                                            <Ionicons name="car-sport" size={28} color="#ef4444" />
-                                        </View>
-                                        <View style={styles.resultInfo}>
-                                            <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
-                                            <Text style={styles.resultAddress} numberOfLines={1}>{item.address}</Text>
-
-                                            <View style={styles.metaRow}>
-                                                <View style={styles.distanceBadge}>
-                                                    <Ionicons name="location" size={12} color="#0284c7" />
-                                                    <Text style={styles.distanceText}>{item.distanceText}</Text>
-                                                </View>
-                                                <View style={styles.ratingBox}>
-                                                    <Text style={styles.ratingText}>{item.rating} </Text>
-                                                    <StarRating rating={item.rating} />
-                                                    <Text style={styles.reviewsText}>({item.reviews})</Text>
-                                                </View>
-                                            </View>
-                                        </View>
-                                        <View style={styles.chevronBox}>
-                                            <Ionicons name="navigate-circle-outline" size={28} color="#3b82f6" />
-                                        </View>
-                                    </TouchableOpacity>
-                                ))
-                        }
-                    </View>
-                </View>
-            )}
-
-        </ScrollView>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#f8fafc",
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
     formContainer: { marginBottom: 20 },
