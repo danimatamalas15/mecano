@@ -4,12 +4,6 @@ import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, Scro
 import { fetchChatGPTResponse } from "../services/openai";
 import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 
-const MOCK_FORUMS = [
-    { id: "1", title: "Solucionado: Check Engine parpadea al acelerar", source: "ForoMecanicos.com", date: "Hace 2 semanas", lang: "Español" },
-    { id: "2", title: "Common issues with spark plugs", source: "CarTalk Forums", date: "Hace 1 mes", lang: "Inglés - Traducido automáticamente" },
-    { id: "3", title: "Guía de códigos OBD2 y qué significan", source: "Comunidad Motor", date: "Hace 3 meses", lang: "Español" }
-];
-
 export default function Diagnostico() {
     const [vehicleType, setVehicleType] = useState<"Auto" | "Moto" | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
@@ -18,10 +12,10 @@ export default function Diagnostico() {
     const [symptoms, setSymptoms] = useState("");
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingForums, setIsLoadingForums] = useState(false);
     const [aiResponse, setAiResponse] = useState<string[]>([]);
     const [mockVideos, setMockVideos] = useState<YouTubeVideo[]>([]);
-
-    // const generateMockVideos ... borrado
+    const [forums, setForums] = useState<any[]>([]);
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !symptoms.trim()) {
@@ -54,6 +48,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
             setAiResponse(result);
             setMockVideos(videosData);
             setHasSearched(true);
+            setForums([]); // Limpiar foros al hacer nueva búsqueda
         } catch (error) {
             console.error("Error en diagnostico:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -61,6 +56,33 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleFetchForums = async () => {
+        if (showForums) {
+            setShowForums(false);
+            return;
+        }
+
+        if (forums.length === 0) {
+            setIsLoadingForums(true);
+            try {
+                const queryForums = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} diagnóstico ${symptoms.trim()}`;
+                const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                const url = `${baseUrl}/api/foros?q=${encodeURIComponent(queryForums)}`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.items) {
+                    setForums(data.items);
+                }
+            } catch (err) {
+                console.error("Error buscando foros", err);
+            } finally {
+                setIsLoadingForums(false);
+            }
+        }
+        setShowForums(true);
     };
 
     const openLink = (url: string) => {
@@ -143,16 +165,44 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                             <Text style={styles.resultsTitle}>Resultados Encontrados</Text>
                             <TouchableOpacity
                                 style={styles.forumsToggleButton}
-                                onPress={() => setShowForums(!showForums)}
+                                onPress={handleFetchForums}
                             >
-                                <Ionicons name={showForums ? "bulb" : "earth"} size={18} color="#fff" />
+                                <Ionicons name={showForums ? "arrow-undo" : "earth"} size={18} color="#fff" />
                                 <Text style={styles.forumsToggleText}>
-                                    {showForums ? "VER DIAGNÓSTICO CHATGPT Y VIDEOS" : "BUSCAR TUTORIALES EN FOROS Y WEBS"}
+                                    {showForums ? "VOLVER A RESPUESTA ANTERIOR Y VIDEOS" : "BUSCAR TUTORIALES EN FOROS Y WEBS"}
                                 </Text>
                             </TouchableOpacity>
                         </View>
 
-                        {!showForums ? (
+                        {/* RENDERIZADO CONDICIONAL DE CONTENIDO BASADO EN showForums */}
+                        <View style={{ flexDirection: 'column' }}>
+
+                            {/* SECCIÓN FOROS (Muestra primero si showForums es true) */}
+                            {showForums && (
+                                <View style={[styles.forumsSection, { marginBottom: 30 }]}>
+                                    <Text style={styles.sectionSubtitle}>Tutoriales en Foros y Webs (Resultados)</Text>
+
+                                    {isLoadingForums ? (
+                                        <ActivityIndicator size="small" color="#4f46e5" />
+                                    ) : (
+                                        forums.map((forum, index) => (
+                                            <TouchableOpacity key={`forum-${index}`} style={styles.forumCard} onPress={() => openLink(forum.link)}>
+                                                <Ionicons name="document-text" size={24} color="#3b82f6" />
+                                                <View style={styles.forumInfo}>
+                                                    <Text style={styles.forumTitle} numberOfLines={2}>{forum.title}</Text>
+                                                    <Text style={styles.forumMeta} numberOfLines={1}>{forum.displayLink}</Text>
+                                                    <View style={styles.badgeForum}>
+                                                        <Text style={styles.badgeTextForum}>Foro / Web</Text>
+                                                    </View>
+                                                </View>
+                                                <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                                            </TouchableOpacity>
+                                        ))
+                                    )}
+                                </View>
+                            )}
+
+                            {/* SECCIÓN AI Y VIDEOS */}
                             <View style={styles.aiAndVideos}>
                                 {/* GEMINI 3.1 RESPONSE */}
                                 <View style={styles.iaCard}>
@@ -219,28 +269,8 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                     })}
                                 </View>
                             </View>
-                        ) : (
-                            <View style={styles.forumsSection}>
-                                <Text style={styles.sectionSubtitle}>Tutoriales en Foros y Webs</Text>
-                                {MOCK_FORUMS.map(forum => (
-                                    <TouchableOpacity
-                                        key={forum.id}
-                                        style={styles.forumCard}
-                                        onPress={() => openLink(`https://forum.com/post/${forum.id}`)}
-                                    >
-                                        <Ionicons name="document-text" size={24} color="#3b82f6" />
-                                        <View style={styles.forumInfo}>
-                                            <Text style={styles.forumTitle}>{forum.title}</Text>
-                                            <Text style={styles.forumMeta}>{forum.source} • {forum.date}</Text>
-                                            <View style={styles.badgeForum}>
-                                                <Text style={styles.badgeTextForum}>{forum.lang}</Text>
-                                            </View>
-                                        </View>
-                                        <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
+
+                        </View>
                     </View>
                 )}
 

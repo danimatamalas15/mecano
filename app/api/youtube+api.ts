@@ -31,31 +31,51 @@ export async function GET(request: Request) {
         });
     }
 
-    const googleUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=30&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
-
     try {
-        const response = await fetch(googleUrl);
-        const data = await response.json();
+        const uniqueVideos = new Map();
 
-        if (!response.ok) {
-            console.error(`YouTube API falló: ${data.error?.message || response.statusText}`);
+        // Función helper para procesar items
+        const processItems = (items: any[]) => {
+            if (!items) return;
+            items.forEach((item: any) => {
+                const videoId = item.id?.videoId;
+                if (videoId && !uniqueVideos.has(videoId)) {
+                    uniqueVideos.set(videoId, {
+                        id: videoId,
+                        title: item.snippet?.title?.replace(/&quot;/g, '"').replace(/&#39;/g, "'") || '',
+                        views: "Nuevo tutorial",
+                        image: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+                        lang: "Vídeo Externo",
+                        url: `https://www.youtube.com/watch?v=${videoId}`
+                    });
+                }
+            });
+        };
+
+        // Primera petición (Query original)
+        const googleUrlPrimary = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
+        const responsePrimary = await fetch(googleUrlPrimary);
+        const dataPrimary = await responsePrimary.json();
+
+        if (!responsePrimary.ok) {
+            console.error(`YouTube API falló en petición primaria: ${dataPrimary.error?.message || responsePrimary.statusText}`);
             // Fallback con mock data si falla la cuota o key
             return new Response(JSON.stringify([
                 {
                     id: "mock1",
                     title: `Tutorial paso a paso: ${query}`,
-                    views: "15K vistas",
+                    views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
-                    lang: "Español",
+                    lang: "Auto",
                     url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
                 },
                 {
                     id: "mock2",
-                    title: `Cómo arreglar o cambiar en tu coche/moto`,
-                    views: "8K vistas",
+                    title: `Cómo diagnosticar / reparar este problema`,
+                    views: "Búsqueda general",
                     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=300",
-                    lang: "Español",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+                    lang: "Auto",
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' tutorial')}`
                 }
             ]), {
                 status: 200, // Devolver 200 con fallback
@@ -63,28 +83,24 @@ export async function GET(request: Request) {
             });
         }
 
-        if (!data.items || data.items.length === 0) {
-            return new Response(JSON.stringify([]), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json', ...corsHeaders },
-            });
-        }
+        processItems(dataPrimary.items);
 
-        // Evitar duplicados basados en ID
-        const uniqueVideos = new Map();
+        // Si tenemos pocos resultados (< 30), intentamos una segunda petición ampliando con términos en inglés
+        if (uniqueVideos.size < 30) {
+            // Intentar extraer el modelo de coche/moto y añadir "fix tutorial" o "diagnosis"
+            // Asumimos que la query es algo como "Auto Toyota Corolla diagnostico tirones al acelerar"
+            const englishQuery = query.replace(/diagn[oó]stico/i, 'diagnosis')
+                .replace(/reparaci[oó]n/i, 'repair')
+                + ' fix tutorial mechanism';
 
-        data.items.forEach((item: any) => {
-            if (!uniqueVideos.has(item.id.videoId)) {
-                uniqueVideos.set(item.id.videoId, {
-                    id: item.id.videoId,
-                    title: item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
-                    views: "Nuevo",
-                    image: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
-                    lang: "Vídeo Externo",
-                    url: `https://www.youtube.com/watch?v=${item.id.videoId}`
-                });
+            const googleUrlSecondary = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(englishQuery)}&type=video&key=${apiKey}`;
+            const responseSecondary = await fetch(googleUrlSecondary);
+
+            if (responseSecondary.ok) {
+                const dataSecondary = await responseSecondary.json();
+                processItems(dataSecondary.items);
             }
-        });
+        }
 
         const results = Array.from(uniqueVideos.values());
 
