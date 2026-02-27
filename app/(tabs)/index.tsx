@@ -20,8 +20,6 @@ export default function Home() {
                     <Text style={styles.logoText3D}>iAUTO-BOX</Text>
                 </View>
 
-                <Text style={styles.welcomeText}>¿Qué necesitas hoy?</Text>
-
                 <View style={styles.grid}>
                     {MENU_ITEMS.map((item, index) => (
                         <Link href={item.href as any} key={index} asChild>
@@ -57,7 +55,7 @@ const styles = StyleSheet.create({
     logoContainer: {
         alignItems: "center",
         marginTop: 20,
-        marginBottom: 30,
+        marginBottom: 44, // Aumentado para compensar la falta de texto
     },
     logoText3D: {
         fontSize: 48,
@@ -68,13 +66,6 @@ const styles = StyleSheet.create({
         textShadowOffset: { width: 3, height: 5 },
         textShadowRadius: 1,
         transform: [{ perspective: 500 }, { rotateX: '10deg' }], // Ligero efecto de inclinación 3D
-    },
-    welcomeText: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#0f172a",
-        marginBottom: 24,
-        textAlign: "center",
     },
     grid: {
         flexDirection: "row",
