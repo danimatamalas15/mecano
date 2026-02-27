@@ -12,7 +12,6 @@ export default function Diagnostico() {
     const [symptoms, setSymptoms] = useState("");
 
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingForums, setIsLoadingForums] = useState(false);
     const [aiResponse, setAiResponse] = useState<string[]>([]);
     const [mockVideos, setMockVideos] = useState<YouTubeVideo[]>([]);
     const [forums, setForums] = useState<any[]>([]);
@@ -25,7 +24,6 @@ export default function Diagnostico() {
 
         setIsLoading(true);
         setHasSearched(false);
-        setShowForums(false);
 
         try {
             const prompt = `Eres un mecánico experto en diagnóstico automotriz avanzado. 
@@ -41,51 +39,35 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
             const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'coche';
             const youtubeQuery = `${queryType} ${searchQuery.trim()} reparación diagnóstico problema ${symptoms.trim()}`;
 
-            const [result, videosData] = await Promise.all([
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+            const urlForos = `${baseUrl}/api/foros?q=${encodeURIComponent(youtubeQuery)}`;
+
+            const [result, videosData, forosRes] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(youtubeQuery)
+                fetchYouTubeVideos(youtubeQuery),
+                fetch(urlForos)
             ]);
+
+            const forosData = await forosRes.json();
 
             setAiResponse(result);
             setMockVideos(videosData);
+            if (forosData && forosData.items) {
+                setForums(forosData.items);
+            } else {
+                setForums([]);
+            }
             setHasSearched(true);
-            setForums([]); // Limpiar foros al hacer nueva búsqueda
         } catch (error) {
             console.error("Error en diagnostico:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            alert(`Hubo un error en nuestro servidor de diagnóstico de ChatGPT. Detalle: ${errorMessage}. Reintente más tarde.`);
+            alert(`Hubo un error en nuestro servidor de diagnóstico. Detalle: ${errorMessage}. Reintente más tarde.`);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleFetchForums = async () => {
-        if (showForums) {
-            setShowForums(false);
-            return;
-        }
 
-        if (forums.length === 0) {
-            setIsLoadingForums(true);
-            try {
-                const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'coche';
-                const queryForums = `${queryType} ${searchQuery.trim()} reparación diagnóstico problema ${symptoms.trim()}`;
-                const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                const url = `${baseUrl}/api/foros?q=${encodeURIComponent(queryForums)}`;
-
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.items) {
-                    setForums(data.items);
-                }
-            } catch (err) {
-                console.error("Error buscando foros", err);
-            } finally {
-                setIsLoadingForums(false);
-            }
-        }
-        setShowForums(true);
-    };
 
     const openLink = (url: string) => {
         Linking.openURL(url).catch((err) => console.error("Error abriendo URL: ", err));
@@ -165,68 +147,53 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                     <View style={styles.resultsContainer}>
                         <View style={styles.resultsHeader}>
                             <Text style={styles.resultsTitle}>Resultados Encontrados</Text>
-                            <TouchableOpacity
-                                style={styles.forumsToggleButton}
-                                onPress={handleFetchForums}
-                            >
-                                <Ionicons name={showForums ? "arrow-undo" : "earth"} size={18} color="#fff" />
-                                <Text style={styles.forumsToggleText}>
-                                    {showForums ? "VOLVER A RESPUESTA ANTERIOR Y VIDEOS" : "BUSCAR TUTORIALES EN FOROS Y WEBS"}
-                                </Text>
-                            </TouchableOpacity>
                         </View>
 
-                        {/* RENDERIZADO CONDICIONAL DE CONTENIDO BASADO EN showForums */}
-                        <View style={{ flexDirection: 'column' }}>
+                        <View style={{ flexDirection: 'column', gap: 30 }}>
 
-                            {/* SECCIÓN FOROS (Muestra primero si showForums es true) */}
-                            {showForums && (
-                                <View style={[styles.forumsSection, { marginBottom: 30 }]}>
-                                    <Text style={styles.sectionSubtitle}>Tutoriales en Foros y Webs (Resultados)</Text>
+                            {/* 1. SECCIÓN AI */}
+                            <View style={styles.iaCard}>
+                                <View style={styles.iaHeader}>
+                                    <Ionicons name="sparkles" size={20} color="#8b5cf6" />
+                                    <Text style={styles.iaTitle}>Diagnóstico por ChatGPT</Text>
+                                </View>
 
-                                    {isLoadingForums ? (
-                                        <ActivityIndicator size="small" color="#4f46e5" />
-                                    ) : (
-                                        forums.map((forum, index) => (
-                                            <TouchableOpacity key={`forum-${index}`} style={styles.forumCard} onPress={() => openLink(forum.link)}>
-                                                <Ionicons name="document-text" size={24} color="#3b82f6" />
-                                                <View style={styles.forumInfo}>
-                                                    <Text style={styles.forumTitle} numberOfLines={2}>{forum.title}</Text>
-                                                    <Text style={styles.forumMeta} numberOfLines={1}>{forum.displayLink}</Text>
-                                                    <View style={styles.badgeForum}>
-                                                        <Text style={styles.badgeTextForum}>Foro / Web</Text>
-                                                    </View>
+                                {aiResponse.map((line, index) => (
+                                    <Text key={index} style={index === 0 ? styles.iaText : styles.iaBullet}>
+                                        {line}
+                                    </Text>
+                                ))}
+
+                                <Image
+                                    source={{ uri: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400' }}
+                                    style={styles.iaImage}
+                                />
+                                <Text style={styles.iaImageCaption}>Diagrama común del sistema de inyección y bobinas.</Text>
+                            </View>
+
+                            {/* 2. SECCIÓN FOROS (Si hay) */}
+                            {forums.length > 0 && (
+                                <View style={styles.forumsSection}>
+                                    <Text style={styles.sectionSubtitle}>Tutoriales en Foros y Webs</Text>
+
+                                    {forums.map((forum, index) => (
+                                        <TouchableOpacity key={`forum-${index}`} style={styles.forumCard} onPress={() => openLink(forum.link)}>
+                                            <Ionicons name="document-text" size={24} color="#3b82f6" />
+                                            <View style={styles.forumInfo}>
+                                                <Text style={styles.forumTitle} numberOfLines={2}>{forum.title}</Text>
+                                                <Text style={styles.forumMeta} numberOfLines={1}>{forum.displayLink}</Text>
+                                                <View style={styles.badgeForum}>
+                                                    <Text style={styles.badgeTextForum}>Foro / Web</Text>
                                                 </View>
-                                                <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                            </TouchableOpacity>
-                                        ))
-                                    )}
+                                            </View>
+                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
                             )}
 
-                            {/* SECCIÓN AI Y VIDEOS */}
-                            <View style={styles.aiAndVideos}>
-                                {/* GEMINI 3.1 RESPONSE */}
-                                <View style={styles.iaCard}>
-                                    <View style={styles.iaHeader}>
-                                        <Ionicons name="sparkles" size={20} color="#8b5cf6" />
-                                        <Text style={styles.iaTitle}>Diagnóstico por ChatGPT</Text>
-                                    </View>
-
-                                    {aiResponse.map((line, index) => (
-                                        <Text key={index} style={index === 0 ? styles.iaText : styles.iaBullet}>
-                                            {line}
-                                        </Text>
-                                    ))}
-
-                                    <Image
-                                        source={{ uri: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400' }}
-                                        style={styles.iaImage}
-                                    />
-                                    <Text style={styles.iaImageCaption}>Diagrama común del sistema de inyección y bobinas.</Text>
-                                </View>
-
-                                {/* YOUTUBE VIDEOS */}
+                            {/* 3. YOUTUBE VIDEOS */}
+                            {mockVideos.length > 0 && (
                                 <View style={styles.videosSection}>
                                     <Text style={styles.sectionSubtitle}>{mockVideos.length} Vídeos Relacionados con tu vehículo</Text>
                                     {mockVideos.map(video => {
@@ -270,8 +237,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                         );
                                     })}
                                 </View>
-                            </View>
-
+                            )}
                         </View>
                     </View>
                 )}
