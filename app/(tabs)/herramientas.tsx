@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import GoogleSearchWidget from "../components/GoogleSearchWidget";
+import { saveSearchToHistory } from "../utils/history";
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
@@ -21,12 +22,17 @@ export default function Herramientas() {
         setTimeout(() => {
             setIsLoading(false);
             setHasSearched(true);
+            saveSearchToHistory("Herramientas", itemQuery.trim().substring(0, 60), "hardware");
         }, 500);
     };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logoText3D}>iAUTO-BOX</Text>
+                </View>
 
                 {/* FORMULARIO DE BÚSQUEDA */}
                 <View style={styles.formContainer}>
@@ -78,6 +84,21 @@ const styles = StyleSheet.create({
     },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
+    logoContainer: {
+        alignItems: "center",
+        marginTop: 0,
+        marginBottom: 24,
+    },
+    logoText3D: {
+        fontSize: 32,
+        fontWeight: "900",
+        color: "#2563eb",
+        letterSpacing: 2,
+        textShadowColor: "#1e3a8a",
+        textShadowOffset: { width: 2, height: 3 },
+        textShadowRadius: 1,
+        transform: [{ perspective: 500 }, { rotateX: '10deg' }],
+    },
     formContainer: { marginBottom: 20 },
     section: { marginBottom: 16 },
     label: { fontSize: 15, fontWeight: "600", color: "#1e293b", marginBottom: 8 },

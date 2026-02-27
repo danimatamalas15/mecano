@@ -237,6 +237,10 @@ export default function Talleres() {
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logoText3D}>iAUTO-BOX</Text>
+                </View>
+
                 {/* FORMULARIO */}
                 <View style={styles.formContainer}>
                     <View style={styles.section}>
@@ -365,6 +369,21 @@ const styles = StyleSheet.create({
     },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
+    logoContainer: {
+        alignItems: "center",
+        marginTop: 0,
+        marginBottom: 24,
+    },
+    logoText3D: {
+        fontSize: 32,
+        fontWeight: "900",
+        color: "#2563eb",
+        letterSpacing: 2,
+        textShadowColor: "#1e3a8a",
+        textShadowOffset: { width: 2, height: 3 },
+        textShadowRadius: 1,
+        transform: [{ perspective: 500 }, { rotateX: '10deg' }],
+    },
     formContainer: { marginBottom: 20 },
     section: { marginBottom: 16 },
     label: { fontSize: 15, fontWeight: "600", color: "#1e293b", marginBottom: 8 },

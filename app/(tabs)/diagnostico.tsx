@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
 import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 import { saveSearchToHistory } from "../utils/history";
@@ -37,8 +37,8 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 3. Pasos de comprobación y pruebas específicas recomendadas para descartar cada causa.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
-            const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'coche';
-            const youtubeQuery = `${queryType} ${searchQuery.trim()} reparación diagnóstico problema ${symptoms.trim()}`;
+            const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'automóvil';
+            const youtubeQuery = `${queryType} "${searchQuery.trim()}" diagnóstico o reparación de ${symptoms.trim()}`;
 
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const urlForos = `${baseUrl}/api/foros?q=${encodeURIComponent(youtubeQuery)}`;
@@ -79,182 +79,208 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <SafeAreaView style={styles.safeArea}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-                {/* FORMULARIO DE BÚSQUEDA */}
-                <View style={styles.formContainer}>
-                    <View style={styles.section}>
-                        <Text style={styles.label}>1. Tipo de Vehículo</Text>
-                        <View style={styles.row}>
-                            <TouchableOpacity style={[styles.typeButton, vehicleType === "Auto" && styles.typeButtonActive]} onPress={() => setVehicleType("Auto")}>
-                                <Ionicons name="car-outline" size={24} color={vehicleType === "Auto" ? "#fff" : "#3b82f6"} />
-                                <Text style={[styles.typeButtonText, vehicleType === "Auto" && styles.typeTextActive]}>Automóvil</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.typeButton, vehicleType === "Moto" && styles.typeButtonActive]} onPress={() => setVehicleType("Moto")}>
-                                <Ionicons name="bicycle-outline" size={24} color={vehicleType === "Moto" ? "#fff" : "#3b82f6"} />
-                                <Text style={[styles.typeButtonText, vehicleType === "Moto" && styles.typeTextActive]}>Motocicleta</Text>
-                            </TouchableOpacity>
-                        </View>
+                    <View style={styles.logoContainer}>
+                        <Text style={styles.logoText3D}>iAUTO-BOX</Text>
                     </View>
 
-
-
-                    <View style={styles.section}>
-                        <Text style={styles.label}>2. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Ej: Toyota Corolla 2018..."
-                                placeholderTextColor="#94a3b8"
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                            />
-                        </View>
-                    </View>
-
-                    <View style={styles.section}>
-                        <Text style={styles.label}>3. Describe el problema o síntomas</Text>
-                        <View style={styles.textAreaContainer}>
-                            <TextInput
-                                style={styles.textArea}
-                                placeholder="El coche da tirones al acelerar en segunda marcha..."
-                                placeholderTextColor="#94a3b8"
-                                multiline={true}
-                                numberOfLines={4}
-                                textAlignVertical="top"
-                                value={symptoms}
-                                onChangeText={setSymptoms}
-                            />
-                            <TouchableOpacity style={styles.voiceButton}>
-                                <Ionicons name="mic" size={24} color="#fff" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
-                        <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.submitButtonText}>BUSCAR DIAGNÓSTICO</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* INDICADOR DE CARGA */}
-                {isLoading && (
-                    <View style={{ padding: 30, alignItems: "center" }}>
-                        <ActivityIndicator size="large" color="#3b82f6" />
-                        <Text style={{ marginTop: 10, color: "#64748b" }}>Analizando diagnóstico con ChatGPT...</Text>
-                    </View>
-                )}
-
-                {/* RESULTADOS DE BÚSQUEDA */}
-                {hasSearched && (
-                    <View style={styles.resultsContainer}>
-                        <View style={styles.resultsHeader}>
-                            <Text style={styles.resultsTitle}>Resultados Encontrados</Text>
+                    {/* FORMULARIO DE BÚSQUEDA */}
+                    <View style={styles.formContainer}>
+                        <View style={styles.section}>
+                            <Text style={styles.label}>1. Tipo de Vehículo</Text>
+                            <View style={styles.row}>
+                                <TouchableOpacity style={[styles.typeButton, vehicleType === "Auto" && styles.typeButtonActive]} onPress={() => setVehicleType("Auto")}>
+                                    <Ionicons name="car-outline" size={24} color={vehicleType === "Auto" ? "#fff" : "#3b82f6"} />
+                                    <Text style={[styles.typeButtonText, vehicleType === "Auto" && styles.typeTextActive]}>Automóvil</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.typeButton, vehicleType === "Moto" && styles.typeButtonActive]} onPress={() => setVehicleType("Moto")}>
+                                    <Ionicons name="bicycle-outline" size={24} color={vehicleType === "Moto" ? "#fff" : "#3b82f6"} />
+                                    <Text style={[styles.typeButtonText, vehicleType === "Moto" && styles.typeTextActive]}>Motocicleta</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
-                        <View style={{ flexDirection: 'column', gap: 30 }}>
 
-                            {/* 1. SECCIÓN AI */}
-                            <View style={styles.iaCard}>
-                                <View style={styles.iaHeader}>
-                                    <Ionicons name="sparkles" size={20} color="#8b5cf6" />
-                                    <Text style={styles.iaTitle}>Diagnóstico por ChatGPT</Text>
-                                </View>
 
-                                {aiResponse.map((line, index) => (
-                                    <Text key={index} style={index === 0 ? styles.iaText : styles.iaBullet}>
-                                        {line}
-                                    </Text>
-                                ))}
-
-                                <Image
-                                    source={{ uri: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400' }}
-                                    style={styles.iaImage}
+                        <View style={styles.section}>
+                            <Text style={styles.label}>2. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
+                            <View style={styles.searchContainer}>
+                                <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Ej: Toyota Corolla 2018..."
+                                    placeholderTextColor="#94a3b8"
+                                    value={searchQuery}
+                                    onChangeText={setSearchQuery}
                                 />
-                                <Text style={styles.iaImageCaption}>Diagrama común del sistema de inyección y bobinas.</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.section}>
+                            <Text style={styles.label}>3. Describe el problema o síntomas</Text>
+                            <View style={styles.textAreaContainer}>
+                                <TextInput
+                                    style={styles.textArea}
+                                    placeholder="El coche da tirones al acelerar en segunda marcha..."
+                                    placeholderTextColor="#94a3b8"
+                                    multiline={true}
+                                    numberOfLines={4}
+                                    textAlignVertical="top"
+                                    value={symptoms}
+                                    onChangeText={setSymptoms}
+                                />
+                                <TouchableOpacity style={styles.voiceButton}>
+                                    <Ionicons name="mic" size={24} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
+                            <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={styles.submitButtonText}>BUSCAR DIAGNÓSTICO</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* INDICADOR DE CARGA */}
+                    {isLoading && (
+                        <View style={{ padding: 30, alignItems: "center" }}>
+                            <ActivityIndicator size="large" color="#3b82f6" />
+                            <Text style={{ marginTop: 10, color: "#64748b" }}>Analizando diagnóstico con ChatGPT...</Text>
+                        </View>
+                    )}
+
+                    {/* RESULTADOS DE BÚSQUEDA */}
+                    {hasSearched && (
+                        <View style={styles.resultsContainer}>
+                            <View style={styles.resultsHeader}>
+                                <Text style={styles.resultsTitle}>Resultados Encontrados</Text>
                             </View>
 
-                            {/* 2. SECCIÓN FOROS (Si hay) */}
-                            {forums.length > 0 && (
-                                <View style={styles.forumsSection}>
-                                    <Text style={styles.sectionSubtitle}>Tutoriales en Foros y Webs</Text>
+                            <View style={{ flexDirection: 'column', gap: 30 }}>
 
-                                    {forums.map((forum, index) => (
-                                        <TouchableOpacity key={`forum-${index}`} style={styles.forumCard} onPress={() => openLink(forum.link)}>
-                                            <Ionicons name="document-text" size={24} color="#3b82f6" />
-                                            <View style={styles.forumInfo}>
-                                                <Text style={styles.forumTitle} numberOfLines={2}>{forum.title}</Text>
-                                                <Text style={styles.forumMeta} numberOfLines={1}>{forum.displayLink}</Text>
-                                                <View style={styles.badgeForum}>
-                                                    <Text style={styles.badgeTextForum}>Foro / Web</Text>
-                                                </View>
-                                            </View>
-                                            <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                                        </TouchableOpacity>
+                                {/* 1. SECCIÓN AI */}
+                                <View style={styles.iaCard}>
+                                    <View style={styles.iaHeader}>
+                                        <Ionicons name="sparkles" size={20} color="#8b5cf6" />
+                                        <Text style={styles.iaTitle}>Diagnóstico por ChatGPT</Text>
+                                    </View>
+
+                                    {aiResponse.map((line, index) => (
+                                        <Text key={index} style={index === 0 ? styles.iaText : styles.iaBullet}>
+                                            {line}
+                                        </Text>
                                     ))}
-                                </View>
-                            )}
 
-                            {/* 3. YOUTUBE VIDEOS */}
-                            {mockVideos.length > 0 && (
-                                <View style={styles.videosSection}>
-                                    <Text style={styles.sectionSubtitle}>{mockVideos.length} Vídeos Relacionados con tu vehículo</Text>
-                                    {mockVideos.map(video => {
-                                        const cardContent = (
-                                            <>
-                                                <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
-                                                <View style={styles.videoInfo}>
-                                                    <Text style={styles.videoTitle}>{video.title}</Text>
-                                                    <Text style={styles.videoMeta}>{video.views}</Text>
-                                                    <View style={styles.badge}>
-                                                        <Text style={styles.badgeText}>{video.lang}</Text>
+                                    <Image
+                                        source={{ uri: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400' }}
+                                        style={styles.iaImage}
+                                    />
+                                    <Text style={styles.iaImageCaption}>Diagrama común del sistema de inyección y bobinas.</Text>
+                                </View>
+
+                                {/* 2. SECCIÓN FOROS (Si hay) */}
+                                {forums.length > 0 && (
+                                    <View style={styles.forumsSection}>
+                                        <Text style={styles.sectionSubtitle}>Tutoriales en Foros y Webs</Text>
+
+                                        {forums.map((forum, index) => (
+                                            <TouchableOpacity key={`forum-${index}`} style={styles.forumCard} onPress={() => openLink(forum.link)}>
+                                                <Ionicons name="document-text" size={24} color="#3b82f6" />
+                                                <View style={styles.forumInfo}>
+                                                    <Text style={styles.forumTitle} numberOfLines={2}>{forum.title}</Text>
+                                                    <Text style={styles.forumMeta} numberOfLines={1}>{forum.displayLink}</Text>
+                                                    <View style={styles.badgeForum}>
+                                                        <Text style={styles.badgeTextForum}>Foro / Web</Text>
                                                     </View>
                                                 </View>
-                                            </>
-                                        );
-
-                                        if (Platform.OS === 'web') {
-                                            return (
-                                                <a
-                                                    key={video.id}
-                                                    href={video.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{ textDecoration: 'none', display: 'flex' }}
-                                                >
-                                                    <View style={[styles.videoCard, { flex: 1 }]}>
-                                                        {cardContent}
-                                                    </View>
-                                                </a>
-                                            );
-                                        }
-
-                                        return (
-                                            <TouchableOpacity
-                                                key={video.id}
-                                                style={styles.videoCard}
-                                                onPress={() => openLink(video.url)}
-                                            >
-                                                {cardContent}
+                                                <Ionicons name="open-outline" size={20} color="#94a3b8" />
                                             </TouchableOpacity>
-                                        );
-                                    })}
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                )}
+                                        ))}
+                                    </View>
+                                )}
 
-            </ScrollView>
-        </KeyboardAvoidingView>
+                                {/* 3. YOUTUBE VIDEOS */}
+                                {mockVideos.length > 0 && (
+                                    <View style={styles.videosSection}>
+                                        <Text style={styles.sectionSubtitle}>{mockVideos.length} Vídeos Relacionados con tu vehículo</Text>
+                                        {mockVideos.map(video => {
+                                            const cardContent = (
+                                                <>
+                                                    <Image source={{ uri: video.image }} style={styles.videoThumbnail} />
+                                                    <View style={styles.videoInfo}>
+                                                        <Text style={styles.videoTitle}>{video.title}</Text>
+                                                        <Text style={styles.videoMeta}>{video.views}</Text>
+                                                        <View style={styles.badge}>
+                                                            <Text style={styles.badgeText}>{video.lang}</Text>
+                                                        </View>
+                                                    </View>
+                                                </>
+                                            );
+
+                                            if (Platform.OS === 'web') {
+                                                return (
+                                                    <a
+                                                        key={video.id}
+                                                        href={video.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ textDecoration: 'none', display: 'flex' }}
+                                                    >
+                                                        <View style={[styles.videoCard, { flex: 1 }]}>
+                                                            {cardContent}
+                                                        </View>
+                                                    </a>
+                                                );
+                                            }
+
+                                            return (
+                                                <TouchableOpacity
+                                                    key={video.id}
+                                                    style={styles.videoCard}
+                                                    onPress={() => openLink(video.url)}
+                                                >
+                                                    {cardContent}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#f8fafc",
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
+    logoContainer: {
+        alignItems: "center",
+        marginTop: 0,
+        marginBottom: 24,
+    },
+    logoText3D: {
+        fontSize: 32,
+        fontWeight: "900",
+        color: "#2563eb",
+        letterSpacing: 2,
+        textShadowColor: "#1e3a8a",
+        textShadowOffset: { width: 2, height: 3 },
+        textShadowRadius: 1,
+        transform: [{ perspective: 500 }, { rotateX: '10deg' }],
+    },
     formContainer: { marginBottom: 20 },
     section: { marginBottom: 16 },
     label: { fontSize: 15, fontWeight: "600", color: "#1e293b", marginBottom: 8 },

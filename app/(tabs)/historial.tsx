@@ -31,6 +31,10 @@ export default function Historial() {
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logoText3D}>iAUTO-BOX</Text>
+                </View>
+
                 <Text style={styles.header}>Tus búsquedas recientes</Text>
 
                 {history.length === 0 ? (
@@ -73,6 +77,21 @@ const styles = StyleSheet.create({
     },
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
+    logoContainer: {
+        alignItems: "center",
+        marginTop: 0,
+        marginBottom: 24,
+    },
+    logoText3D: {
+        fontSize: 32,
+        fontWeight: "900",
+        color: "#2563eb",
+        letterSpacing: 2,
+        textShadowColor: "#1e3a8a",
+        textShadowOffset: { width: 2, height: 3 },
+        textShadowRadius: 1,
+        transform: [{ perspective: 500 }, { rotateX: '10deg' }],
+    },
     header: { fontSize: 18, fontWeight: "bold", color: "#1e293b", marginBottom: 20 },
     historyCard: {
         flexDirection: "row", alignItems: "center", backgroundColor: "#ffffff",

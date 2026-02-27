@@ -14,14 +14,16 @@ export const saveSearchToHistory = async (category: string, detail: string, icon
     try {
         const storedHistory = await AsyncStorage.getItem(HISTORY_KEY);
         let history: SearchHistoryItem[] = storedHistory ? JSON.parse(storedHistory) : [];
-
-        // No duplicar busquedas idénticas
-        history = history.filter(item => !(item.category === category && item.detail.toLowerCase() === detail.toLowerCase()));
+        // No duplicar busquedas idénticas de forma segura
+        history = history.filter(item => {
+            if (!item || !item.category || !item.detail) return false;
+            return !(item.category === category && item.detail.toLowerCase() === (detail || "").toLowerCase());
+        });
 
         const newItem: SearchHistoryItem = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
             category,
-            detail,
+            detail: detail || "Sin detalle",
             date: new Date().toISOString(),
             icon
         };
