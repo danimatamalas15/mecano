@@ -37,7 +37,7 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo y la 
 3. Consejos de seguridad y prevenciones de errores comunes durante el desmontaje y ensamblaje.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-) o números (1., 2., ...).`;
 
-            const youtubeQuery = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} como reparar ${repairQuery.trim()}`;
+            const youtubeQuery = `"${searchQuery.trim()}" como reparar ${repairQuery.trim()}`;
 
             const [result, videosData] = await Promise.all([
                 fetchChatGPTResponse(prompt),
@@ -66,7 +66,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
         if (forums.length === 0) {
             setIsLoadingForums(true);
             try {
-                const queryForums = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} como reparar ${repairQuery.trim()}`;
+                const queryForums = `"${searchQuery.trim()}" como reparar ${repairQuery.trim()}`;
                 const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
                 const url = `${baseUrl}/api/foros?q=${encodeURIComponent(queryForums)}`;
 

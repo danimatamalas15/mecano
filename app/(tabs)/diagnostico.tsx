@@ -38,7 +38,7 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 3. Pasos de comprobación y pruebas específicas recomendadas para descartar cada causa.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
-            const youtubeQuery = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} diagnóstico ${symptoms.trim()}`;
+            const youtubeQuery = `"${searchQuery.trim()}" diagnóstico ${symptoms.trim()}`;
 
             const [result, videosData] = await Promise.all([
                 fetchChatGPTResponse(prompt),
@@ -67,7 +67,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
         if (forums.length === 0) {
             setIsLoadingForums(true);
             try {
-                const queryForums = `${vehicleType === 'Moto' ? 'Moto' : 'Coche'} ${searchQuery.trim()} diagnóstico ${symptoms.trim()}`;
+                const queryForums = `"${searchQuery.trim()}" diagnóstico ${symptoms.trim()}`;
                 const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
                 const url = `${baseUrl}/api/foros?q=${encodeURIComponent(queryForums)}`;
 
