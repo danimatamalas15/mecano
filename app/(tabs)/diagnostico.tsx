@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
-import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
+import { fetchYouTubeVideos, sortYouTubeVideos, YouTubeVideo } from "../services/youtube";
 import { saveSearchToHistory } from "../utils/history";
 
 export default function Diagnostico() {
@@ -38,7 +38,7 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
             const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'automóvil';
-            const youtubeQuery = `${queryType} "${searchQuery.trim()}" diagnóstico o reparación de ${symptoms.trim()}`;
+            const youtubeQuery = `${queryType} ${searchQuery.trim()} diagnóstico o reparación de ${symptoms.trim()}`;
 
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const urlForos = `${baseUrl}/api/foros?q=${encodeURIComponent(youtubeQuery)}`;
@@ -52,7 +52,10 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
             const forosData = await forosRes.json();
 
             setAiResponse(result);
-            setMockVideos(videosData);
+
+            const sortedVideos = sortYouTubeVideos(videosData, searchQuery.trim(), symptoms.trim());
+            setMockVideos(sortedVideos);
+
             if (forosData && forosData.items) {
                 setForums(forosData.items);
             } else {
