@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const problem = searchParams.get('problem');
 
     if (!vehicle || !problem) {
-        return new Response(JSON.stringify({ error: 'Faltan los parámetros vehicle o problem' }), {
+        return new Response(JSON.stringify({ error: 'Faltan parámetros vehicle o problem' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API Key no configurada en el servidor local' }), {
+        return new Response(JSON.stringify({ error: 'API Key no configurada' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -35,9 +35,8 @@ export async function GET(request: Request) {
     try {
         const uniqueVideos = new Map();
 
-        // Función helper para procesar items
         const processItems = (items: any[]) => {
-            if (!items) return;
+            if (!items || !Array.isArray(items)) return;
             items.forEach((item: any) => {
                 const videoId = item.id?.videoId;
                 if (videoId && !uniqueVideos.has(videoId)) {
@@ -53,56 +52,73 @@ export async function GET(request: Request) {
             });
         };
 
-        // Construir 3 queries distintas para máxima cobertura
-        const query1 = `${vehicle} ${problem}`; // Exacta: Vehículo y Problema
-        const query2 = `cómo arreglar ${problem}`; // Genérica: Solo problema
-        const query3 = `${vehicle} repair diagnosis tutorial`; // Genérica: Solo vehículo
-
         const getUrl = (q: string, max: number) =>
             `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
 
-        // Hacemos las 3 peticiones en paralelo
-        const [res1, res2, res3] = await Promise.allSettled([
-            fetch(getUrl(query1, 20)),
-            fetch(getUrl(query2, 20)),
-            fetch(getUrl(query3, 20))
+        const q1 = `${vehicle} ${problem}`;
+        const q2 = `cómo solucionar reparar ${problem}`;
+        const q3 = `${vehicle} diagnosis tutorial`;
+
+        const fetchSafe = async (url: string) => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) return null;
+                const data = await res.json();
+                return data.items;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const [items1, items2, items3] = await Promise.all([
+            fetchSafe(getUrl(q1, 15)),
+            fetchSafe(getUrl(q2, 20)),
+            fetchSafe(getUrl(q3, 20))
         ]);
 
-        if (res1.status === 'fulfilled' && res1.value.ok) {
-            const data1 = await res1.value.json();
-            processItems(data1.items);
-        }
-
-        if (res2.status === 'fulfilled' && res2.value.ok) {
-            const data2 = await res2.value.json();
-            processItems(data2.items);
-        }
-
-        if (res3.status === 'fulfilled' && res3.value.ok) {
-            const data3 = await res3.value.json();
-            processItems(data3.items);
-        }
+        processItems(items1 || []);
+        processItems(items2 || []);
+        processItems(items3 || []);
 
         let results = Array.from(uniqueVideos.values());
 
-        // Truncar a un máximo de 50 si nos pasamos
-        if (results.length > 50) {
-            results = results.slice(0, 50);
+        if (results.length === 0) {
+            return new Response(JSON.stringify([
+                {
+                    id: "mock1",
+                    title: `Ver tutoriales de ${vehicle} ${problem} en YouTube`,
+                    views: "Búsqueda web",
+                    image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
+                    lang: "Auto",
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(vehicle + ' ' + problem)}`
+                },
+                {
+                    id: "mock2",
+                    title: `Tutoriales genéricos sobre este problema`,
+                    views: "Búsqueda web",
+                    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=300",
+                    lang: "Auto",
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(problem!)}`
+                }
+            ]), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
         }
 
-        // Si no hay resultados por problemas de API
-        if (results.length === 0) {
-            throw new Error("No se devolvió ningún resultado (Posible límite de cuota superado)");
+        if (results.length > 50) {
+            results = results.slice(0, 50);
         }
 
         return new Response(JSON.stringify(results), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
+
     } catch (error) {
         console.error('Error conectando con YouTube:', error);
-        return new Response(JSON.stringify([]), {
-            status: 200,
+        return new Response(JSON.stringify({ error: String(error) }), {
+            status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }

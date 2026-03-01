@@ -29,16 +29,7 @@ export const fetchYouTubeVideos = async (vehicle: string, problem: string): Prom
 
     } catch (error: any) {
         console.error("Fallo obteniendo YouTube Videos:", error);
-
-        // Renderizar el error visiblemente como un "video" falso para depurar en Vercel
-        return [{
-            id: "error-debug",
-            title: `[ERROR DEBUG] ${error.message || String(error)}`,
-            views: "ERROR",
-            image: "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?q=80&w=200",
-            lang: "DEBUG",
-            url: "#"
-        }];
+        return [];
     }
 };
 
