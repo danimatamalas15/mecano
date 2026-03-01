@@ -9,10 +9,10 @@ export interface YouTubeVideo {
     url: string;
 }
 
-export const fetchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
+export const fetchYouTubeVideos = async (vehicle: string, problem: string): Promise<YouTubeVideo[]> => {
     try {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        const url = `${baseUrl}/api/youtube?q=${encodeURIComponent(query)}`;
+        const url = `${baseUrl}/api/youtube?vehicle=${encodeURIComponent(vehicle)}&problem=${encodeURIComponent(problem)}`;
         const response = await fetch(url);
 
         if (!response.ok) {

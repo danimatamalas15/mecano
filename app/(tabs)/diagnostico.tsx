@@ -45,7 +45,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
 
             const [result, videosData, forosRes] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(youtubeQuery),
+                fetchYouTubeVideos(`${queryType} ${searchQuery.trim()}`, symptoms.trim()),
                 fetch(urlForos)
             ]);
 

@@ -13,10 +13,11 @@ export async function OPTIONS() {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
+    const vehicle = searchParams.get('vehicle');
+    const problem = searchParams.get('problem');
 
-    if (!query) {
-        return new Response(JSON.stringify({ error: 'Falta el parámetro q (query)' }), {
+    if (!vehicle || !problem) {
+        return new Response(JSON.stringify({ error: 'Faltan los parámetros vehicle o problem' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -52,57 +53,47 @@ export async function GET(request: Request) {
             });
         };
 
-        // Primera petición (Query original)
-        const googleUrlPrimary = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
-        const responsePrimary = await fetch(googleUrlPrimary);
-        const dataPrimary = await responsePrimary.json();
+        // Construir 3 queries distintas para máxima cobertura
+        const query1 = `${vehicle} ${problem}`; // Exacta: Vehículo y Problema
+        const query2 = `cómo arreglar ${problem}`; // Genérica: Solo problema
+        const query3 = `${vehicle} repair diagnosis tutorial`; // Genérica: Solo vehículo
 
-        if (!responsePrimary.ok) {
-            console.error(`YouTube API falló en petición primaria: ${dataPrimary.error?.message || responsePrimary.statusText}`);
-            // Fallback con mock data si falla la cuota o key
-            return new Response(JSON.stringify([
-                {
-                    id: "mock1",
-                    title: `Tutorial paso a paso: ${query}`,
-                    views: "Búsqueda web",
-                    image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
-                    lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
-                },
-                {
-                    id: "mock2",
-                    title: `Cómo diagnosticar / reparar este problema`,
-                    views: "Búsqueda general",
-                    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=300",
-                    lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' tutorial')}`
-                }
-            ]), {
-                status: 200, // Devolver 200 con fallback
-                headers: { 'Content-Type': 'application/json', ...corsHeaders },
-            });
+        const getUrl = (q: string, max: number) =>
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
+
+        // Hacemos las 3 peticiones en paralelo
+        const [res1, res2, res3] = await Promise.allSettled([
+            fetch(getUrl(query1, 20)),
+            fetch(getUrl(query2, 20)),
+            fetch(getUrl(query3, 20))
+        ]);
+
+        if (res1.status === 'fulfilled' && res1.value.ok) {
+            const data1 = await res1.value.json();
+            processItems(data1.items);
         }
 
-        processItems(dataPrimary.items);
-
-        // Si tenemos pocos resultados (< 30), intentamos una segunda petición ampliando con términos en inglés
-        if (uniqueVideos.size < 30) {
-            // Intentar extraer el modelo de coche/moto y añadir "fix tutorial" o "diagnosis"
-            // Asumimos que la query es algo como "Auto Toyota Corolla diagnostico tirones al acelerar"
-            const englishQuery = query.replace(/diagn[oó]stico/i, 'diagnosis')
-                .replace(/reparaci[oó]n/i, 'repair')
-                + ' fix tutorial mechanism';
-
-            const googleUrlSecondary = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(englishQuery)}&type=video&key=${apiKey}`;
-            const responseSecondary = await fetch(googleUrlSecondary);
-
-            if (responseSecondary.ok) {
-                const dataSecondary = await responseSecondary.json();
-                processItems(dataSecondary.items);
-            }
+        if (res2.status === 'fulfilled' && res2.value.ok) {
+            const data2 = await res2.value.json();
+            processItems(data2.items);
         }
 
-        const results = Array.from(uniqueVideos.values());
+        if (res3.status === 'fulfilled' && res3.value.ok) {
+            const data3 = await res3.value.json();
+            processItems(data3.items);
+        }
+
+        let results = Array.from(uniqueVideos.values());
+
+        // Truncar a un máximo de 50 si nos pasamos
+        if (results.length > 50) {
+            results = results.slice(0, 50);
+        }
+
+        // Si no hay resultados por problemas de API
+        if (results.length === 0) {
+            throw new Error("No se devolvió ningún resultado (Posible límite de cuota superado)");
+        }
 
         return new Response(JSON.stringify(results), {
             status: 200,
@@ -110,7 +101,6 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         console.error('Error conectando con YouTube:', error);
-        // Devolver un array vacío (en lugar de objeto error) para no romper el map en UI
         return new Response(JSON.stringify([]), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
