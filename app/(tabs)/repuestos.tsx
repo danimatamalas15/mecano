@@ -66,7 +66,7 @@ export default function Repuestos() {
 
             const [response, videosData] = await Promise.all([
                 fetch(relativeUrl),
-                fetchYouTubeVideos(youtubeQuery)
+                fetchYouTubeVideos('Coche', `${marca} ${modelo} ${motor} ${ano}`, `cómo cambiar ${itemQuery}`)
             ]);
 
             const data = await response.json();

@@ -2,14 +2,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { fetchChatGPTResponse } from "../services/openai";
-import { fetchYouTubeVideos, sortYouTubeVideos, YouTubeVideo } from "../services/youtube";
+import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 import { saveSearchToHistory } from "../utils/history";
+
+import { Picker } from '@react-native-picker/picker';
 
 export default function Diagnostico() {
     const [vehicleType, setVehicleType] = useState<"Auto" | "Moto" | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
-    const [showForums, setShowForums] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
+
+    // Nuevo estado segregado
+    const [formData, setFormData] = useState({
+        marca: '',
+        modelo: '',
+        version: '',
+        motor: '',
+        ano: ''
+    });
+
     const [symptoms, setSymptoms] = useState("");
 
     const [isLoading, setIsLoading] = useState(false);
@@ -18,17 +28,19 @@ export default function Diagnostico() {
     const [forums, setForums] = useState<any[]>([]);
 
     const handleSearch = async () => {
-        if (!searchQuery.trim() || !symptoms.trim()) {
-            alert("Por favor, indica los datos del vehículo y los síntomas experimentados para proceder.");
+        if (!symptoms.trim()) {
+            alert("El síntoma es obligatorio para buscar.");
             return;
         }
+
+        const vehicleStr = `${formData.marca} ${formData.modelo} ${formData.version} ${formData.motor} ${formData.ano}`.trim();
 
         setIsLoading(true);
         setHasSearched(false);
 
         try {
             const prompt = `Eres un mecánico experto en diagnóstico automotriz avanzado. 
-El vehículo es un: ${vehicleType === 'Moto' ? 'Motocicleta' : 'Automóvil'} - ${searchQuery}
+El vehículo es un: ${vehicleType === 'Moto' ? 'Motocicleta' : 'Automóvil'} - ${vehicleStr}
 Los síntomas descritos son: ${symptoms}
 
 Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto con los síntomas descritos. Proporciona un diagnóstico exhaustivo y sumamente detallado. Tu respuesta debe incluir:
@@ -38,14 +50,14 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
             const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'automóvil';
-            const youtubeQuery = `${queryType} ${searchQuery.trim()} diagnóstico o reparación de ${symptoms.trim()}`;
+            const youtubeQuery = `${queryType} ${vehicleStr} diagnóstico o reparación de ${symptoms.trim()}`;
 
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const urlForos = `${baseUrl}/api/foros?q=${encodeURIComponent(youtubeQuery)}`;
 
             const [result, videosData, forosRes] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(`${queryType} ${searchQuery.trim()}`, symptoms.trim()),
+                fetchYouTubeVideos(queryType, vehicleStr, symptoms.trim()),
                 fetch(urlForos)
             ]);
 
@@ -53,8 +65,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
 
             setAiResponse(result);
 
-            const sortedVideos = sortYouTubeVideos(videosData, searchQuery.trim(), symptoms.trim());
-            setMockVideos(sortedVideos);
+            setMockVideos(videosData);
 
             if (forosData && forosData.items) {
                 setForums(forosData.items);
@@ -64,7 +75,7 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
             setHasSearched(true);
 
             // Guardar historial
-            saveSearchToHistory("Diagnóstico", `${searchQuery.trim()}: ${symptoms.trim()}`.substring(0, 60), "build");
+            saveSearchToHistory("Diagnóstico", `${vehicleStr}: ${symptoms.trim()}`.substring(0, 60), "build");
 
         } catch (error) {
             console.error("Error en diagnostico:", error);
@@ -108,17 +119,87 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
 
 
 
-                        <View style={styles.section}>
-                            <Text style={styles.label}>2. Vehículo - en este orden: Marca - Modelo - Versión - Motor - Año fabricación</Text>
-                            <View style={styles.searchContainer}>
-                                <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Ej: Toyota Corolla 2018..."
-                                    placeholderTextColor="#94a3b8"
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                />
+                        <View style={styles.sectionContainer}>
+                            <Text style={styles.label}>2. Vehículo (Marca, Modelo, Versión, Motor, Año)</Text>
+                            <View style={styles.gridContainer}>
+                                <View style={styles.gridItem}>
+                                    <Text style={styles.gridLabel}>Marca</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker selectedValue={formData.marca} onValueChange={(itemValue) => setFormData({ ...formData, marca: itemValue })}>
+                                            <Picker.Item label="Cualquiera" value="" />
+                                            <Picker.Item label="Toyota" value="Toyota" />
+                                            <Picker.Item label="Honda" value="Honda" />
+                                            <Picker.Item label="Ford" value="Ford" />
+                                            <Picker.Item label="Volkswagen" value="Volkswagen" />
+                                            <Picker.Item label="Renault" value="Renault" />
+                                            <Picker.Item label="Peugeot" value="Peugeot" />
+                                            <Picker.Item label="SEAT" value="SEAT" />
+                                            <Picker.Item label="BMW" value="BMW" />
+                                            <Picker.Item label="Mercedes" value="Mercedes-Benz" />
+                                            <Picker.Item label="Audi" value="Audi" />
+                                        </Picker>
+                                    </View>
+                                </View>
+                                <View style={styles.gridItem}>
+                                    <Text style={styles.gridLabel}>Modelo</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker selectedValue={formData.modelo} onValueChange={(itemValue) => setFormData({ ...formData, modelo: itemValue })}>
+                                            <Picker.Item label="Cualquiera" value="" />
+                                            {/* Opciones genéricas, se pueden volver dependientes de la marca en el futuro */}
+                                            <Picker.Item label="Corolla" value="Corolla" />
+                                            <Picker.Item label="Civic" value="Civic" />
+                                            <Picker.Item label="Focus" value="Focus" />
+                                            <Picker.Item label="Golf" value="Golf" />
+                                            <Picker.Item label="Leon" value="Leon" />
+                                            <Picker.Item label="Clio" value="Clio" />
+                                            <Picker.Item label="208" value="208" />
+                                            <Picker.Item label="Ibiza" value="Ibiza" />
+                                            <Picker.Item label="A3" value="A3" />
+                                            <Picker.Item label="Serie 3" value="Serie 3" />
+                                        </Picker>
+                                    </View>
+                                </View>
+                                <View style={styles.gridItem}>
+                                    <Text style={styles.gridLabel}>Versión</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker selectedValue={formData.version} onValueChange={(itemValue) => setFormData({ ...formData, version: itemValue })}>
+                                            <Picker.Item label="Cualquiera" value="" />
+                                            <Picker.Item label="Base" value="Base" />
+                                            <Picker.Item label="GTI" value="GTI" />
+                                            <Picker.Item label="ST" value="ST" />
+                                            <Picker.Item label="RS" value="RS" />
+                                            <Picker.Item label="FR" value="FR" />
+                                        </Picker>
+                                    </View>
+                                </View>
+                                <View style={styles.gridItem}>
+                                    <Text style={styles.gridLabel}>Motor</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker selectedValue={formData.motor} onValueChange={(itemValue) => setFormData({ ...formData, motor: itemValue })}>
+                                            <Picker.Item label="Cualquiera" value="" />
+                                            <Picker.Item label="1.0 TSI" value="1.0 TSI" />
+                                            <Picker.Item label="1.2 PureTech" value="1.2 PureTech" />
+                                            <Picker.Item label="1.4 TFSI" value="1.4 TFSI" />
+                                            <Picker.Item label="1.5 dCi" value="1.5 dCi" />
+                                            <Picker.Item label="1.6 TDI" value="1.6 TDI" />
+                                            <Picker.Item label="1.8 Híbrido" value="1.8 Híbrido" />
+                                            <Picker.Item label="2.0 TDI" value="2.0 TDI" />
+                                            <Picker.Item label="2.0 TSI" value="2.0 TSI" />
+                                        </Picker>
+                                    </View>
+                                </View>
+                                <View style={styles.gridItem}>
+                                    <Text style={styles.gridLabel}>Año</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker selectedValue={formData.ano} onValueChange={(itemValue) => setFormData({ ...formData, ano: itemValue })}>
+                                            <Picker.Item label="Cualquiera" value="" />
+                                            {[...Array(25)].map((_, i) => {
+                                                const year = (new Date().getFullYear() - i).toString();
+                                                return <Picker.Item key={year} label={year} value={year} />;
+                                            })}
+                                        </Picker>
+                                    </View>
+                                </View>
                             </View>
                         </View>
 
@@ -321,6 +402,37 @@ const styles = StyleSheet.create({
         flexDirection: "row", justifyContent: "center"
     },
     submitButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 8,
+    },
+    gridItem: {
+        width: '48%',
+        marginBottom: 12,
+    },
+    gridLabel: {
+        fontSize: 13,
+        color: '#475569',
+        marginBottom: 4,
+        fontWeight: '500'
+    },
+    pickerContainer: {
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        borderRadius: 8,
+        backgroundColor: '#ffffff',
+        overflow: 'hidden'
+    },
+    sectionContainer: {
+        marginBottom: 20,
+        backgroundColor: '#f8fafc',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
 
     // Results
     resultsContainer: {
