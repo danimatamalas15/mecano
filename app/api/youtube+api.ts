@@ -13,7 +13,6 @@ export async function OPTIONS() {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const vehicleType = searchParams.get('vehicletype') || '';
     const vehicle = searchParams.get('vehicle');
     const problem = searchParams.get('problem');
 
@@ -34,57 +33,56 @@ export async function GET(request: Request) {
     }
 
     try {
-        const queryEspecifica = `${vehicle} ${problem}`.trim();
-        const queryGeneral = `${problem} ${vehicleType}`.trim();
+        const uniqueVideos = new Map();
 
-        const fetchYouTube = async (query: string, maxResults: number) => {
-            if (!query) return [];
+        const processItems = (items: any[]) => {
+            if (!items || !Array.isArray(items)) return;
+            items.forEach((item: any) => {
+                const videoId = item.id?.videoId;
+                if (videoId && !uniqueVideos.has(videoId)) {
+                    uniqueVideos.set(videoId, {
+                        id: videoId,
+                        title: item.snippet?.title?.replace(/&quot;/g, '"').replace(/&#39;/g, "'") || '',
+                        views: "Nuevo tutorial",
+                        image: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+                        lang: "Vídeo Externo",
+                        url: `https://www.youtube.com/watch?v=${videoId}`
+                    });
+                }
+            });
+        };
+
+        const getUrl = (q: string, max: number) =>
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
+
+        const q1 = `${vehicle} ${problem}`;
+        const q2 = `cómo solucionar reparar ${problem}`;
+        const q3 = `${vehicle} diagnosis tutorial`;
+
+        const fetchSafe = async (url: string) => {
             try {
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
                 const res = await fetch(url);
-                if (!res.ok) return [];
+                if (!res.ok) return null;
                 const data = await res.json();
-                return data.items || [];
+                return data.items;
             } catch (e) {
-                return [];
+                return null;
             }
         };
 
-        let videosEspecificos = [];
-        let videosGenerales = [];
-
-        const [resEspecificos, resGenerales] = await Promise.all([
-            fetchYouTube(queryEspecifica, 30),
-            fetchYouTube(queryGeneral, 50)
+        const [items1, items2, items3] = await Promise.all([
+            fetchSafe(getUrl(q1, 15)),
+            fetchSafe(getUrl(q2, 20)),
+            fetchSafe(getUrl(q3, 20))
         ]);
 
-        videosEspecificos = resEspecificos;
-        videosGenerales = resGenerales;
+        processItems(items1 || []);
+        processItems(items2 || []);
+        processItems(items3 || []);
 
-        const todosLosVideos = [...videosEspecificos, ...videosGenerales];
-        const videosUnicos: any[] = [];
-        const idsVistos = new Set();
+        let results = Array.from(uniqueVideos.values());
 
-        for (const video of todosLosVideos) {
-            const videoId = video.id?.videoId;
-            if (!videoId) continue;
-
-            if (!idsVistos.has(videoId)) {
-                idsVistos.add(videoId);
-                videosUnicos.push({
-                    id: videoId,
-                    title: video.snippet?.title?.replace(/&quot;/g, '"').replace(/&#39;/g, "'") || '',
-                    views: "Nuevo tutorial",
-                    image: video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url || '',
-                    lang: "Vídeo Externo",
-                    url: `https://www.youtube.com/watch?v=${videoId}`
-                });
-            }
-
-            if (videosUnicos.length === 50) break;
-        }
-
-        if (videosUnicos.length === 0) {
+        if (results.length === 0) {
             return new Response(JSON.stringify([
                 {
                     id: "mock1",
@@ -92,7 +90,7 @@ export async function GET(request: Request) {
                     views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${vehicle} ${problem}`)}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(vehicle + ' ' + problem)}`
                 },
                 {
                     id: "mock2",
@@ -108,7 +106,11 @@ export async function GET(request: Request) {
             });
         }
 
-        return new Response(JSON.stringify(videosUnicos), {
+        if (results.length > 50) {
+            results = results.slice(0, 50);
+        }
+
+        return new Response(JSON.stringify(results), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
