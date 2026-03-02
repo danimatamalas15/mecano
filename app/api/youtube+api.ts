@@ -55,25 +55,30 @@ export async function GET(request: Request) {
         const getUrl = (q: string, max: number) =>
             `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
 
-        const q1 = `${vehicle} ${problem}`;
-        const q2 = `cómo solucionar reparar ${problem}`;
-        const q3 = `${vehicle} diagnosis tutorial`;
+        // 1. Búsqueda super específica con vehículo entero + problema
+        const q1 = `${vehicle} ${problem}`.trim();
+        // 2. Búsqueda enfocada en arreglar el problema en la marca/modelo (tomamos las 2 primeras palabras del vehículo asumiendo Tipo y Marca)
+        const vehicleParts = vehicle.split(' ');
+        const vehicleShort = vehicleParts.slice(0, 3).join(' '); // ej. "automóvil Toyota Corolla"
+        const q2 = `cómo reparar ${problem} ${vehicleShort}`.trim();
+        // 3. Fallback general: Solo el síntoma y el tipo de vehículo
+        const q3 = `${vehicleParts[0] || 'vehículo'} ${problem} solucionar`.trim();
 
         const fetchSafe = async (url: string) => {
             try {
                 const res = await fetch(url);
                 if (!res.ok) return null;
                 const data = await res.json();
-                return data.items;
+                return data.items || [];
             } catch (e) {
                 return null;
             }
         };
 
         const [items1, items2, items3] = await Promise.all([
-            fetchSafe(getUrl(q1, 15)),
-            fetchSafe(getUrl(q2, 20)),
-            fetchSafe(getUrl(q3, 20))
+            fetchSafe(getUrl(q1, 30)),
+            fetchSafe(getUrl(q2, 30)),
+            fetchSafe(getUrl(q3, 30))
         ]);
 
         processItems(items1 || []);

@@ -35,15 +35,18 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo y la 
 3. Consejos de seguridad y prevenciones de errores comunes durante el desmontaje y ensamblaje.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-) o números (1., 2., ...).`;
 
-            const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'automóvil';
+            const queryType = vehicleType === 'Moto' ? 'moto' : 'coche';
             const youtubeQuery = `${queryType} ${searchQuery.trim()} cómo reparar o cambiar ${repairQuery.trim()}`;
 
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const urlForos = `${baseUrl}/api/foros?q=${encodeURIComponent(youtubeQuery)}`;
 
+            // Mandar a YouTube exclusivamente la marca/modelo y la reparación (más natural)
+            const youtubeVehicle = searchQuery.trim() || queryType;
+
             const [result, videosData, forosRes] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(`${queryType} ${searchQuery.trim()}`, repairQuery.trim()),
+                fetchYouTubeVideos(youtubeVehicle, repairQuery.trim()),
                 fetch(urlForos)
             ]);
 

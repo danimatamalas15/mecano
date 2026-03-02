@@ -36,15 +36,18 @@ Instrucciones: Analiza meticulosamente el modelo específico del vehículo junto
 3. Pasos de comprobación y pruebas específicas recomendadas para descartar cada causa.
 Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown compleja, guíate por saltos de línea y viñetas simples (-).`;
 
-            const queryType = vehicleType === 'Moto' ? 'motocicleta' : 'automóvil';
+            const queryType = vehicleType === 'Moto' ? 'moto' : 'coche';
             const youtubeQuery = `${queryType} ${searchQuery.trim()} diagnóstico o reparación de ${symptoms.trim()}`;
 
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const urlForos = `${baseUrl}/api/foros?q=${encodeURIComponent(youtubeQuery)}`;
 
+            // Mandar a YouTube exclusivamente la marca/modelo y los síntomas (más natural)
+            const youtubeVehicle = searchQuery.trim() || queryType;
+
             const [result, videosData, forosRes] = await Promise.all([
                 fetchChatGPTResponse(prompt),
-                fetchYouTubeVideos(`${queryType} ${searchQuery.trim()}`, symptoms.trim()),
+                fetchYouTubeVideos(youtubeVehicle, symptoms.trim()),
                 fetch(urlForos)
             ]);
 
