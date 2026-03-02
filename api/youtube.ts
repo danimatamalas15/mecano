@@ -17,19 +17,20 @@ export async function OPTIONS() {
 
 export default async function handler(request: Request) {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
+    const vehicle = searchParams.get('vehicle');
+    const problem = searchParams.get('problem');
 
-    if (!query) {
-        return new Response(JSON.stringify({ error: 'Falta el parámetro q (query)' }), {
+    if (!vehicle || !problem) {
+        return new Response(JSON.stringify({ error: 'Faltan parámetros vehicle o problem' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
 
     if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API Key no configurada en el servidor' }), {
+        return new Response(JSON.stringify({ error: 'API Key no configurada' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -38,9 +39,8 @@ export default async function handler(request: Request) {
     try {
         const uniqueVideos = new Map();
 
-        // Función helper para procesar items
         const processItems = (items: any[]) => {
-            if (!items) return;
+            if (!items || !Array.isArray(items)) return;
             items.forEach((item: any) => {
                 const videoId = item.id?.videoId;
                 if (videoId && !uniqueVideos.has(videoId)) {
@@ -56,29 +56,67 @@ export default async function handler(request: Request) {
             });
         };
 
-        // Primera petición (Query original)
-        const googleUrlPrimary = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
-        const responsePrimary = await fetch(googleUrlPrimary);
-        const dataPrimary = await responsePrimary.json();
+        const getUrl = (q: string, max: number) =>
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
 
-        if (!responsePrimary.ok) {
-            console.warn(`YouTube API falló en petición primaria: ${dataPrimary.error?.message || responsePrimary.statusText}`);
+        // Limpiar cualquier comilla doble que el usuario haya podido introducir, ya que fuerzan búsqueda exacta en YouTube y dan 0 resultados
+        const safeVehicle = vehicle.replace(/"/g, '').trim();
+        const safeProblem = problem.replace(/"/g, '').trim();
+
+        // 1. Los que hagan referencia a la marca, modelo y tipo indicado por el usuario teniendo en cuenta la descripción del problema.
+        const q1 = `${safeVehicle} ${safeProblem}`.trim();
+
+        // 2. Los que hagan referencia a la descripción del problema, aunque no sean de la marca y modelo del vehículo indicado por el usuario.
+        const q2 = `${safeProblem}`.trim();
+
+        // 3. El resto de videos relacionados hasta llegar a los 50 videos en total.
+        const q3 = `cómo solucionar reparar ${safeProblem}`.trim();
+
+        const fetchSafe = async (url: string) => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    console.error("Error en YouTube API:", res.status, errData);
+                    return null;
+                }
+                const data = await res.json();
+                return data.items || [];
+            } catch (e) {
+                console.error("Excepción catcheada YouTube Fetch:", e);
+                return null;
+            }
+        };
+
+        const [items1, items2, items3] = await Promise.all([
+            fetchSafe(getUrl(q1, 30)),
+            fetchSafe(getUrl(q2, 30)),
+            fetchSafe(getUrl(q3, 20)) // Pedimos un poco menos del genérico porque los dos primeros suplirán la inmensa mayoría
+        ]);
+
+        processItems(items1 || []);
+        processItems(items2 || []);
+        processItems(items3 || []);
+
+        let results = Array.from(uniqueVideos.values());
+
+        if (results.length === 0) {
             return new Response(JSON.stringify([
                 {
                     id: "mock1",
-                    title: `Tutorial paso a paso: ${query}`,
+                    title: `Ver tutoriales de ${vehicle} ${problem} en YouTube`,
                     views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(vehicle + ' ' + problem)}`
                 },
                 {
                     id: "mock2",
-                    title: `Cómo diagnosticar / reparar este problema`,
-                    views: "Búsqueda general",
+                    title: `Tutoriales genéricos sobre este problema`,
+                    views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' tutorial')}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(problem!)}`
                 }
             ]), {
                 status: 200,
@@ -86,33 +124,19 @@ export default async function handler(request: Request) {
             });
         }
 
-        processItems(dataPrimary.items);
-
-        // Si tenemos pocos resultados (< 30), intentamos una segunda petición ampliando con términos en inglés
-        if (uniqueVideos.size < 30) {
-            const englishQuery = query.replace(/diagn[oó]stico/i, 'diagnosis')
-                .replace(/reparaci[oó]n/i, 'repair')
-                + ' fix tutorial mechanism';
-
-            const googleUrlSecondary = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(englishQuery)}&type=video&key=${apiKey}`;
-            const responseSecondary = await fetch(googleUrlSecondary);
-
-            if (responseSecondary.ok) {
-                const dataSecondary = await responseSecondary.json();
-                processItems(dataSecondary.items);
-            }
+        if (results.length > 50) {
+            results = results.slice(0, 50);
         }
-
-        const results = Array.from(uniqueVideos.values());
 
         return new Response(JSON.stringify(results), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
+
     } catch (error) {
-        console.error('Error interno conectando con YouTube:', error);
-        return new Response(JSON.stringify([]), {
-            status: 200,
+        console.error('Error conectando con YouTube:', error);
+        return new Response(JSON.stringify({ error: String(error) }), {
+            status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
     }
