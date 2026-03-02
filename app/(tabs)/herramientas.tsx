@@ -66,7 +66,7 @@ export default function Herramientas() {
 
                         {/* LISTA DE RESULTADOS DEL BUSCADOR PROGRAMABLE G CSE */}
                         <View style={styles.listContainer}>
-                            <GoogleSearchWidget query={`comprar herramienta ${itemQuery}`} />
+                            <GoogleSearchWidget query={`herramienta ${itemQuery}`} />
                         </View>
                     </View>
                 )}

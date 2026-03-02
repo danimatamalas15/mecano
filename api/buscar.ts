@@ -28,9 +28,9 @@ export default async function handler(request: Request) {
     let query = '';
 
     if (marca || modelo || repuesto) {
-        query = `comprar ${repuesto} para ${marca} ${modelo} ${version} ${motor} ${ano}`.trim();
+        query = `${repuesto} para ${marca} ${modelo} ${version} ${motor} ${ano}`.trim();
     } else if (herramienta) {
-        query = `comprar herramienta ${herramienta}`;
+        query = `herramienta ${herramienta}`.trim();
     } else {
         return new Response(JSON.stringify({ error: 'Faltan parámetros de búsqueda válidos (vehiculo/repuesto, o herramienta)' }), {
             status: 400,
