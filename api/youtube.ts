@@ -1,39 +1,24 @@
-export const config = {
-    runtime: 'edge',
-};
+export default async function handler(req: any, res: any) {
+    // Configurar CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
 
-export async function OPTIONS() {
-    return new Response(null, {
-        status: 204,
-        headers: corsHeaders
-    });
-}
-
-export default async function handler(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const vehicle = searchParams.get('vehicle');
-    const problem = searchParams.get('problem');
+    const vehicle = req.query.vehicle;
+    const problem = req.query.problem;
 
     if (!vehicle || !problem) {
-        return new Response(JSON.stringify({ error: 'Faltan parámetros vehicle o problem' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return res.status(400).json({ error: 'Faltan parámetros vehicle o problem' });
     }
 
     const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
 
     if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API Key no configurada' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return res.status(500).json({ error: 'API Key no configurada' });
     }
 
     try {
@@ -60,8 +45,8 @@ export default async function handler(request: Request) {
             `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
 
         // Limpiar cualquier comilla doble que el usuario haya podido introducir, ya que fuerzan búsqueda exacta en YouTube y dan 0 resultados
-        const safeVehicle = vehicle.replace(/"/g, '').trim();
-        const safeProblem = problem.replace(/"/g, '').trim();
+        const safeVehicle = String(vehicle).replace(/"/g, '').trim();
+        const safeProblem = String(problem).replace(/"/g, '').trim();
 
         // 1. Los que hagan referencia a la marca, modelo y tipo indicado por el usuario teniendo en cuenta la descripción del problema.
         const q1 = `${safeVehicle} ${safeProblem}`.trim();
@@ -74,13 +59,13 @@ export default async function handler(request: Request) {
 
         const fetchSafe = async (url: string) => {
             try {
-                const res = await fetch(url);
-                if (!res.ok) {
-                    const errData = await res.json().catch(() => ({}));
-                    console.error("Error en YouTube API:", res.status, errData);
+                const resHttp = await fetch(url);
+                if (!resHttp.ok) {
+                    const errData = await resHttp.json().catch(() => ({}));
+                    console.error("Error en YouTube API:", resHttp.status, errData);
                     return null;
                 }
-                const data = await res.json();
+                const data = await resHttp.json();
                 return data.items || [];
             } catch (e) {
                 console.error("Excepción catcheada YouTube Fetch:", e);
@@ -101,14 +86,14 @@ export default async function handler(request: Request) {
         let results = Array.from(uniqueVideos.values());
 
         if (results.length === 0) {
-            return new Response(JSON.stringify([
+            return res.status(200).json([
                 {
                     id: "mock1",
-                    title: `Ver tutoriales de ${vehicle} ${problem} en YouTube`,
+                    title: `Ver tutoriales de ${safeVehicle} ${safeProblem} en YouTube`,
                     views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(vehicle + ' ' + problem)}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(safeVehicle + ' ' + safeProblem)}`
                 },
                 {
                     id: "mock2",
@@ -116,28 +101,19 @@ export default async function handler(request: Request) {
                     views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(problem!)}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(safeProblem)}`
                 }
-            ]), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json', ...corsHeaders },
-            });
+            ]);
         }
 
         if (results.length > 50) {
             results = results.slice(0, 50);
         }
 
-        return new Response(JSON.stringify(results), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return res.status(200).json(results);
 
     } catch (error) {
         console.error('Error conectando con YouTube:', error);
-        return new Response(JSON.stringify({ error: String(error) }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return res.status(500).json({ error: String(error) });
     }
 }
