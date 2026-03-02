@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         });
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
 
     if (!apiKey) {
         return new Response(JSON.stringify({ error: 'API Key no configurada' }), {
@@ -71,10 +71,15 @@ export async function GET(request: Request) {
         const fetchSafe = async (url: string) => {
             try {
                 const res = await fetch(url);
-                if (!res.ok) return null;
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    console.error("Error en YouTube API:", res.status, errData);
+                    return null;
+                }
                 const data = await res.json();
                 return data.items || [];
             } catch (e) {
+                console.error("Excepción catcheada YouTube Fetch:", e);
                 return null;
             }
         };
