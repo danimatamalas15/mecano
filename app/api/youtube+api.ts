@@ -55,14 +55,18 @@ export async function GET(request: Request) {
         const getUrl = (q: string, max: number) =>
             `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
 
-        // 1. Búsqueda super específica con vehículo entero + problema
-        const q1 = `${vehicle} ${problem}`.trim();
-        // 2. Búsqueda enfocada en arreglar el problema en la marca/modelo (tomamos las 2 primeras palabras del vehículo asumiendo Tipo y Marca)
-        const vehicleParts = vehicle.split(' ');
-        const vehicleShort = vehicleParts.slice(0, 3).join(' '); // ej. "automóvil Toyota Corolla"
-        const q2 = `cómo reparar ${problem} ${vehicleShort}`.trim();
-        // 3. Fallback general: Solo el síntoma y el tipo de vehículo
-        const q3 = `${vehicleParts[0] || 'vehículo'} ${problem} solucionar`.trim();
+        // Limpiar cualquier comilla doble que el usuario haya podido introducir, ya que fuerzan búsqueda exacta en YouTube y dan 0 resultados
+        const safeVehicle = vehicle.replace(/"/g, '').trim();
+        const safeProblem = problem.replace(/"/g, '').trim();
+
+        // 1. Los que hagan referencia a la marca, modelo y tipo indicado por el usuario teniendo en cuenta la descripción del problema.
+        const q1 = `${safeVehicle} ${safeProblem}`.trim();
+
+        // 2. Los que hagan referencia a la descripción del problema, aunque no sean de la marca y modelo del vehículo indicado por el usuario.
+        const q2 = `${safeProblem}`.trim();
+
+        // 3. El resto de videos relacionados hasta llegar a los 50 videos en total.
+        const q3 = `cómo solucionar reparar ${safeProblem}`.trim();
 
         const fetchSafe = async (url: string) => {
             try {
@@ -78,7 +82,7 @@ export async function GET(request: Request) {
         const [items1, items2, items3] = await Promise.all([
             fetchSafe(getUrl(q1, 30)),
             fetchSafe(getUrl(q2, 30)),
-            fetchSafe(getUrl(q3, 30))
+            fetchSafe(getUrl(q3, 20)) // Pedimos un poco menos del genérico porque los dos primeros suplirán la inmensa mayoría
         ]);
 
         processItems(items1 || []);
