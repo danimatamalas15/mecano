@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useVoiceToText } from "../hooks/useVoiceToText";
 import { fetchChatGPTResponse } from "../services/openai";
 import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 import { saveSearchToHistory } from "../utils/history";
@@ -14,6 +15,8 @@ export default function Reparacion() {
     const [aiResponse, setAiResponse] = useState<string[]>([]);
     const [mockVideos, setMockVideos] = useState<YouTubeVideo[]>([]);
     const [forums, setForums] = useState<any[]>([]);
+
+    const { isListening, startListening } = useVoiceToText();
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !repairQuery.trim()) {
@@ -131,15 +134,24 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                     value={repairQuery}
                                     onChangeText={setRepairQuery}
                                 />
-                                <TouchableOpacity style={styles.voiceButton}>
-                                    <Ionicons name="mic" size={24} color="#fff" />
+                                <TouchableOpacity
+                                    style={[styles.voiceButton, isListening && { backgroundColor: "#ef4444" }]}
+                                    onPress={() => startListening((text) => setRepairQuery(prev => prev ? `${prev} ${text}` : text))}
+                                >
+                                    <Ionicons name={isListening ? "mic" : "mic-outline"} size={24} color="#fff" />
                                 </TouchableOpacity>
                             </View>
                         </View>
 
-                        <TouchableOpacity style={styles.submitButton} onPress={handleSearch}>
+                        <TouchableOpacity
+                            style={[styles.submitButton, isLoading && { opacity: 0.7 }]}
+                            onPress={handleSearch}
+                            disabled={isLoading}
+                        >
                             <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
-                            <Text style={styles.submitButtonText}>BUSCAR REPARACIÓN</Text>
+                            <Text style={styles.submitButtonText}>
+                                {isLoading ? "BUSCANDO..." : "BUSCAR REPARACIÓN"}
+                            </Text>
                         </TouchableOpacity>
                     </View>
 
@@ -296,7 +308,7 @@ const styles = StyleSheet.create({
         padding: 14, fontSize: 14, color: "#1e293b", minHeight: 100
     },
     voiceButton: {
-        position: "absolute", bottom: 10, right: 10, backgroundColor: "#ef4444",
+        position: "absolute", bottom: 10, right: 10, backgroundColor: "#3b82f6",
         width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center",
         shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4
     },

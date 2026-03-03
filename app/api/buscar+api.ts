@@ -92,14 +92,20 @@ export async function GET(request: Request) {
         const responses = await Promise.all(fetchPromises);
 
         for (const response of responses) {
-            const data = await response.json();
+            if (hasError) {
+                // Si ya hubo error, consumimos el resto de las respuestas para evitar fugas de memoria
+                await response.arrayBuffer().catch(() => { });
+                continue;
+            }
+
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 hasError = true;
                 lastResponse = data;
                 lastStatus = response.status;
                 lastErrorMsg = data.error?.message || response.statusText;
-                break;
+                continue;
             }
 
             if (data.items && data.items.length > 0) {
