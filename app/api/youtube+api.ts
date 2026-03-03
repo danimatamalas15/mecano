@@ -55,18 +55,38 @@ export async function GET(request: Request) {
         const getUrl = (q: string, max: number) =>
             `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${max}&q=${encodeURIComponent(q)}&type=video&key=${apiKey}`;
 
-        // Limpiar cualquier comilla doble que el usuario haya podido introducir, ya que fuerzan búsqueda exacta en YouTube y dan 0 resultados
+        // Limpiar cualquier comilla doble que el usuario haya podido introducir
         const safeVehicle = vehicle.replace(/"/g, '').trim();
         const safeProblem = problem.replace(/"/g, '').trim();
 
-        // 1. Los que hagan referencia a la marca, modelo y tipo indicado por el usuario teniendo en cuenta la descripción del problema.
+        // Extraer el motor del string "Marca - Modelo - Versión - Motor - Año"
+        let motor = safeVehicle;
+        const parts = safeVehicle.split('-');
+        if (parts.length >= 4) {
+            // Si el formato es con guiones, el 4to elemento (índice 3) suele ser el motor
+            motor = parts[3].trim();
+        } else {
+            // Intento heurístico separando por espacios
+            const words = safeVehicle.split(' ');
+            if (words.length > 2) {
+                // Eliminamos la primera palabra (Marca) y la última si es un número (Año)
+                if (!isNaN(Number(words[words.length - 1]))) {
+                    words.pop();
+                }
+                words.shift();
+                motor = words.join(' ');
+            }
+        }
+
+        // --- Definición de Queries Prioritarias ---
+        // 1. Marca - Modelo - Versión - Motor - Año + Descripción
         const q1 = `${safeVehicle} ${safeProblem}`.trim();
 
-        // 2. Los que hagan referencia a la descripción del problema, aunque no sean de la marca y modelo del vehículo indicado por el usuario.
-        const q2 = `${safeProblem}`.trim();
+        // 2. Motor + Descripción (ignorando Marca, Modelo, Versión y Año)
+        const q2 = `${motor} ${safeProblem}`.trim();
 
-        // 3. El resto de videos relacionados hasta llegar a los 50 videos en total.
-        const q3 = `cómo solucionar reparar ${safeProblem}`.trim();
+        // 3. Resto de videos (Descripción únicamente)
+        const q3 = `${safeProblem}`.trim();
 
         const fetchSafe = async (url: string) => {
             try {
@@ -84,14 +104,19 @@ export async function GET(request: Request) {
             }
         };
 
+        // Pedimos 50 a cada una para garantizar llenar el cupo si alguna falla o trae repetidos
         const [items1, items2, items3] = await Promise.all([
-            fetchSafe(getUrl(q1, 30)),
-            fetchSafe(getUrl(q2, 30)),
-            fetchSafe(getUrl(q3, 20)) // Pedimos un poco menos del genérico porque los dos primeros suplirán la inmensa mayoría
+            fetchSafe(getUrl(q1, 50)),
+            fetchSafe(getUrl(q2, 50)),
+            fetchSafe(getUrl(q3, 50))
         ]);
 
+        // Procesar estrictamente en orden:
+        // Primero prioridad 1
         processItems(items1 || []);
+        // Luego prioridad 2 (solo agregará si no son duplicados por ID)
         processItems(items2 || []);
+        // Finalmente prioridad 3 (solo agregará si no son duplicados por ID)
         processItems(items3 || []);
 
         let results = Array.from(uniqueVideos.values());
@@ -100,11 +125,11 @@ export async function GET(request: Request) {
             return new Response(JSON.stringify([
                 {
                     id: "mock1",
-                    title: `Ver tutoriales de ${vehicle} ${problem} en YouTube`,
+                    title: `Ver tutoriales de ${safeVehicle} ${safeProblem} en YouTube`,
                     views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1590650046522-86107297eefb?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(vehicle + ' ' + problem)}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(safeVehicle + ' ' + safeProblem)}`
                 },
                 {
                     id: "mock2",
@@ -112,7 +137,7 @@ export async function GET(request: Request) {
                     views: "Búsqueda web",
                     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=300",
                     lang: "Auto",
-                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(problem!)}`
+                    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(safeProblem)}`
                 }
             ]), {
                 status: 200,
@@ -120,6 +145,7 @@ export async function GET(request: Request) {
             });
         }
 
+        // Dejar EXACATAMENTE 50 videos si hay más
         if (results.length > 50) {
             results = results.slice(0, 50);
         }
