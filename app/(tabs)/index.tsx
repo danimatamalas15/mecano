@@ -55,8 +55,8 @@ const styles = StyleSheet.create({
     logoContainer: {
         width: "100%",
         alignItems: "center",
-        marginTop: 20,
-        marginBottom: 22, // Aumentado para compensar la falta de texto, pero reducido a la mitad del original (44)
+        marginTop: 0,
+        marginBottom: 12,
     },
     logoText3D: {
         width: "100%",
