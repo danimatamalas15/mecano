@@ -17,7 +17,7 @@ export default function Home() {
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
                 <View style={styles.logoContainer}>
-                    <Text style={styles.logoText3D}>iAUTO-BOX</Text>
+                    <Text style={styles.logoText3D} adjustsFontSizeToFit numberOfLines={1}>iAUTO-BOX</Text>
                 </View>
 
                 <View style={styles.grid}>
@@ -53,15 +53,18 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     logoContainer: {
+        width: "100%",
         alignItems: "center",
         marginTop: 20,
-        marginBottom: 44, // Aumentado para compensar la falta de texto
+        marginBottom: 22, // Aumentado para compensar la falta de texto, pero reducido a la mitad del original (44)
     },
     logoText3D: {
-        fontSize: 48,
+        width: "100%",
+        textAlign: "center",
+        fontSize: 58,
         fontWeight: "900",
         color: "#2563eb", // Azul principal
-        letterSpacing: 2,
+        letterSpacing: 4,
         textShadowColor: "#1e3a8a", // Sombra azul oscura para efecto 3D
         textShadowOffset: { width: 3, height: 5 },
         textShadowRadius: 1,
