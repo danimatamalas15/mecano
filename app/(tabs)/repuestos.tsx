@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Image, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useVoiceToText } from "../hooks/useVoiceToText";
 import { fetchYouTubeVideos, YouTubeVideo } from "../services/youtube";
 import { saveSearchToHistory } from "../utils/history";
 
@@ -17,6 +18,8 @@ export default function Repuestos() {
     const [isLoading, setIsLoading] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
+
+    const { isListening, startListening } = useVoiceToText();
 
     const extractPrice = (item: any): number => {
         // Intentar parsear precio del pagemap offer o product
@@ -151,6 +154,12 @@ export default function Repuestos() {
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                             <TextInput style={styles.searchInput} placeholder="Ej: Filtro de aceite Bosch..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
+                            <TouchableOpacity
+                                style={{ padding: 8, borderRadius: 20, backgroundColor: isListening ? "#ef4444" : "transparent" }}
+                                onPress={() => startListening((text) => setItemQuery(prev => prev ? `${prev} ${text}` : text))}
+                            >
+                                <Ionicons name={isListening ? "mic" : "mic-outline"} size={22} color={isListening ? "#fff" : "#3b82f6"} />
+                            </TouchableOpacity>
                         </View>
                     </View>
 

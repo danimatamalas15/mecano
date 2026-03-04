@@ -142,10 +142,10 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                     onChangeText={setRepairQuery}
                                 />
                                 <TouchableOpacity
-                                    style={[styles.voiceButton, isListeningRepair && { backgroundColor: "#ef4444" }]}
+                                    style={[styles.voiceButton, { backgroundColor: isListeningRepair ? "#ef4444" : "transparent" }]}
                                     onPress={() => startListeningRepair((text) => setRepairQuery(prev => prev ? `${prev} ${text}` : text))}
                                 >
-                                    <Ionicons name={isListeningRepair ? "mic" : "mic-outline"} size={24} color="#fff" />
+                                    <Ionicons name={isListeningRepair ? "mic" : "mic-outline"} size={22} color={isListeningRepair ? "#fff" : "#3b82f6"} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -315,9 +315,8 @@ const styles = StyleSheet.create({
         padding: 14, fontSize: 14, color: "#1e293b", minHeight: 100
     },
     voiceButton: {
-        position: "absolute", bottom: 10, right: 10, backgroundColor: "#3b82f6",
-        width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center",
-        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4
+        position: "absolute", bottom: 10, right: 10,
+        padding: 8, borderRadius: 20, justifyContent: "center", alignItems: "center"
     },
     submitButton: {
         backgroundColor: "#3b82f6", borderRadius: 10, padding: 16, alignItems: "center", marginTop: 10,

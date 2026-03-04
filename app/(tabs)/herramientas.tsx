@@ -2,12 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import GoogleSearchWidget from "../components/GoogleSearchWidget";
+import { useVoiceToText } from "../hooks/useVoiceToText";
 import { saveSearchToHistory } from "../utils/history";
 
 export default function Herramientas() {
     const [hasSearched, setHasSearched] = useState(false);
     const [itemQuery, setItemQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    const { isListening, startListening } = useVoiceToText();
 
     const handleSearch = () => {
         if (!itemQuery.trim()) {
@@ -41,6 +44,12 @@ export default function Herramientas() {
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                             <TextInput style={styles.searchInput} placeholder="Ej: Llave dinamométrica..." placeholderTextColor="#94a3b8" value={itemQuery} onChangeText={setItemQuery} />
+                            <TouchableOpacity
+                                style={{ padding: 8, borderRadius: 20, backgroundColor: isListening ? "#ef4444" : "transparent" }}
+                                onPress={() => startListening((text) => setItemQuery(prev => prev ? `${prev} ${text}` : text))}
+                            >
+                                <Ionicons name={isListening ? "mic" : "mic-outline"} size={22} color={isListening ? "#fff" : "#3b82f6"} />
+                            </TouchableOpacity>
                         </View>
                     </View>
 
