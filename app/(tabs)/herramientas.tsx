@@ -34,7 +34,7 @@ export default function Herramientas() {
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
                 <View style={styles.logoContainer}>
-                    <Text style={styles.logoText3D}>iAUTO-BOX</Text>
+                    <Text style={styles.logoText3D} adjustsFontSizeToFit numberOfLines={1}>iAUTO-BOX</Text>
                 </View>
 
                 {/* FORMULARIO DE BÚSQUEDA */}
@@ -94,15 +94,18 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#f8fafc" },
     content: { padding: 20, paddingBottom: 40 },
     logoContainer: {
+        width: "100%",
         alignItems: "center",
         marginTop: 0,
-        marginBottom: 24,
+        marginBottom: 12,
     },
     logoText3D: {
-        fontSize: 32,
+        width: "100%",
+        textAlign: "center",
+        fontSize: 58,
         fontWeight: "900",
         color: "#2563eb",
-        letterSpacing: 2,
+        letterSpacing: 4,
         textShadowColor: "#1e3a8a",
         textShadowOffset: { width: 2, height: 3 },
         textShadowRadius: 1,
