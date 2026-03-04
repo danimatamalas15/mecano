@@ -17,7 +17,8 @@ export default function Diagnostico() {
     const [mockVideos, setMockVideos] = useState<YouTubeVideo[]>([]);
     const [forums, setForums] = useState<any[]>([]);
 
-    const { isListening, startListening } = useVoiceToText();
+    const { isListening: isListeningVehicle, startListening: startListeningVehicle } = useVoiceToText();
+    const { isListening: isListeningSymptoms, startListening: startListeningSymptoms } = useVoiceToText();
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !symptoms.trim()) {
@@ -123,6 +124,12 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                     value={searchQuery}
                                     onChangeText={setSearchQuery}
                                 />
+                                <TouchableOpacity
+                                    style={{ padding: 8, borderRadius: 20, backgroundColor: isListeningVehicle ? "#ef4444" : "transparent" }}
+                                    onPress={() => startListeningVehicle((text) => setSearchQuery(prev => prev ? `${prev} ${text}` : text))}
+                                >
+                                    <Ionicons name={isListeningVehicle ? "mic" : "mic-outline"} size={22} color={isListeningVehicle ? "#fff" : "#3b82f6"} />
+                                </TouchableOpacity>
                             </View>
                         </View>
 
@@ -140,10 +147,10 @@ Sé muy preciso, analítico y exhaustivo. NO uses negritas ni sintaxis markdown 
                                     onChangeText={setSymptoms}
                                 />
                                 <TouchableOpacity
-                                    style={[styles.voiceButton, isListening && { backgroundColor: "#ef4444" }]}
-                                    onPress={() => startListening((text) => setSymptoms(prev => prev ? `${prev} ${text}` : text))}
+                                    style={[styles.voiceButton, isListeningSymptoms && { backgroundColor: "#ef4444" }]}
+                                    onPress={() => startListeningSymptoms((text) => setSymptoms(prev => prev ? `${prev} ${text}` : text))}
                                 >
-                                    <Ionicons name={isListening ? "mic" : "mic-outline"} size={24} color="#fff" />
+                                    <Ionicons name={isListeningSymptoms ? "mic" : "mic-outline"} size={24} color="#fff" />
                                 </TouchableOpacity>
                             </View>
                         </View>
