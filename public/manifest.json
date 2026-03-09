@@ -1,0 +1,32 @@
+{
+    "id": "iautobox",
+    "name": "iAuto-Box",
+    "short_name": "iAuto-Box",
+    "description": "iAuto-Box te ofrece en una sola aplicación todo lo que necesitas para tu vehículo (automóvil o motocicleta), desde un diagnóstico, reparación, repuestos, herramientas y búsqueda de talleres en tu proximidad",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
+    "dir": "ltr",
+    "display": "standalone",
+    "orientation": "any",
+    "scope": "/",
+    "start_url": "/",
+    "icons": [
+        {
+            "src": "https://iautobox.vercel.app/favicon.ico",
+            "type": "image/x-icon",
+            "sizes": "64x64 32x32 24x24 16x16"
+        },
+        {
+            "src": "https://iautobox.vercel.app/favicon.ico",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "https://iautobox.vercel.app/favicon.ico",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any maskable"
+        }
+    ]
+}

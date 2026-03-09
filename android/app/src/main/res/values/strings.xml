@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">mecano</string>
+    <string name="title_activity_main">mecano</string>
+    <string name="package_name">iautobox.app</string>
+    <string name="custom_url_scheme">iautobox.app</string>
+</resources>
