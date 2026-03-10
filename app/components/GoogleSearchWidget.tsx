@@ -8,6 +8,8 @@ interface Props {
 
 export default function GoogleSearchWidget({ query }: Props) {
     const [isLoading, setIsLoading] = useState(true);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
     // Usamos el CX por defecto (del cliente) o la env genérica
     const cx = process.env.EXPO_PUBLIC_GOOGLE_CX || 'f2f83861f059a4ca4';
 
@@ -43,19 +45,19 @@ export default function GoogleSearchWidget({ query }: Props) {
         </html>
     `;
 
-    // Render Web (Iframe)
-    if (Platform.OS === 'web') {
-        const iframeRef = useRef<HTMLIFrameElement>(null);
-
-        useEffect(() => {
+    useEffect(() => {
+        if (Platform.OS === 'web') {
             if (iframeRef.current && iframeRef.current.contentWindow) {
                 const doc = iframeRef.current.contentWindow.document;
                 doc.open();
                 doc.write(htmlContent);
                 doc.close();
             }
-        }, [htmlContent]);
+        }
+    }, [htmlContent]);
 
+    // Render Web (Iframe)
+    if (Platform.OS === 'web') {
         return (
             <View style={styles.container}>
                 {isLoading && (

@@ -70,7 +70,7 @@ export default function Herramientas() {
                 {/* RESULTADOS DE BÚSQUEDA */}
                 {hasSearched && (
                     <View style={styles.resultsContainer}>
-                        <Text style={styles.resultsTitle}>Mejores Opciones de "{itemQuery}"</Text>
+                        <Text style={styles.resultsTitle}>Mejores Opciones de &quot;{itemQuery}&quot;</Text>
                         <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Herramientas reales recomendadas</Text>
 
                         {/* LISTA DE RESULTADOS DEL BUSCADOR PROGRAMABLE G CSE */}

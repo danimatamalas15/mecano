@@ -64,7 +64,6 @@ export default function Talleres() {
         setHasSearched(false);
 
         let center: { lat: number, lon: number } | null = null;
-        let isFakeISPLocation = false;
 
         try {
             // Si ya estamos en modo fallback manual, intentamos usar Geocoding
@@ -122,7 +121,6 @@ export default function Talleres() {
                             const detectedLon = pos.coords.longitude;
 
                             if (Math.abs(detectedLat - 40.41) < 0.2 && Math.abs(detectedLon - -3.70) < 0.2) {
-                                isFakeISPLocation = true;
                                 throw new Error("Falso positivo detectado.");
                             }
 
@@ -147,7 +145,7 @@ export default function Talleres() {
                                 const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
                                 center = { lat: location.coords.latitude, lon: location.coords.longitude };
                                 setUserLocation(center);
-                            } catch (e: any) {
+                            } catch {
                                 setShowManualFallback(true);
                                 setLocationError("Fallo interno del GPS nativo. Introduce tu dirección manualmente.");
                                 setIsLoadingLocation(false);
@@ -215,7 +213,7 @@ export default function Talleres() {
                 const queryDesc = showManualFallback && manualAddress.trim() !== '' ? manualAddress : "Ubicación GPS";
                 saveSearchToHistory("Talleres", `${tallerType} en ${queryDesc}`.substring(0, 60), "car");
             }
-        } catch (error) {
+        } catch {
             setLocationError("Ocurrió un error al procesar la ubicación.");
         } finally {
             setIsLoadingLocation(false);

@@ -46,7 +46,7 @@ export const fetchChatGPTResponse = async (prompt: string): Promise<string[]> =>
                 } else {
                     errorDetail = JSON.stringify(errorBody);
                 }
-            } catch (e) {
+            } catch {
                 // Fallback por defecto si no es json parseable
                 errorDetail = response.statusText || `HTTP Status: ${response.status}`;
             }

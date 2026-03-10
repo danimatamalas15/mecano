@@ -65,8 +65,6 @@ export default function Repuestos() {
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             const relativeUrl = `${baseUrl}/api/buscar?marca=${encodeURIComponent(marca)}&modelo=${encodeURIComponent(modelo)}&version=${encodeURIComponent(version)}&motor=${encodeURIComponent(motor)}&ano=${encodeURIComponent(ano)}&repuesto=${encodeURIComponent(itemQuery)}`;
 
-            const youtubeQuery = `como cambiar ${itemQuery} en ${marca} ${modelo} ${motor} ${ano}`.trim();
-
             const [response, videosData] = await Promise.all([
                 fetch(relativeUrl),
                 fetchYouTubeVideos(`${marca} ${modelo} ${motor} ${ano}`.trim(), `cómo cambiar ${itemQuery.trim()}`)
@@ -180,7 +178,7 @@ export default function Repuestos() {
                 {/* RESULTADOS DE BÚSQUEDA */}
                 {hasSearched && (
                     <View style={styles.resultsContainer}>
-                        <Text style={styles.resultsTitle}>Mejores Resultados para "{itemQuery}"</Text>
+                        <Text style={styles.resultsTitle}>Mejores Resultados para &quot;{itemQuery}&quot;</Text>
                         <Text style={{ color: "#64748b", marginBottom: 16, marginTop: -10 }}>Compatibles con {marca} {modelo} {version} {motor} {ano}</Text>
 
                         {/* VIDEOS DE INSTALACION */}

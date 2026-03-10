@@ -20,7 +20,7 @@ export const fetchYouTubeVideos = async (vehicle: string, problem: string): Prom
             try {
                 const errorData = await response.json();
                 errorMsg = errorData.error || errorMsg;
-            } catch (e) { }
+            } catch { }
             throw new Error(errorMsg);
         }
 

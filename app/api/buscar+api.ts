@@ -83,7 +83,6 @@ export async function GET(request: Request) {
         const starts = [1, 11, 21, 31, 41];
         let allItems: any[] = [];
         let hasError = false;
-        let lastResponse: any = null;
         let lastErrorMsg = '';
         let lastStatus = 200;
 
@@ -102,7 +101,6 @@ export async function GET(request: Request) {
 
             if (!response.ok) {
                 hasError = true;
-                lastResponse = data;
                 lastStatus = response.status;
                 lastErrorMsg = data.error?.message || response.statusText;
                 continue;

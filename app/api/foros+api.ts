@@ -54,7 +54,6 @@ export async function GET(request: Request) {
         let allItems: any[] = [];
         let hasError = false;
         let lastErrorMsg = '';
-        let lastStatus = 200;
 
         const fetchPromises = starts.map(start => fetch(`${urlBase}&start=${start}`));
         const responses = await Promise.all(fetchPromises);
@@ -70,7 +69,6 @@ export async function GET(request: Request) {
 
             if (!response.ok) {
                 hasError = true;
-                lastStatus = response.status;
                 lastErrorMsg = data.error?.message || response.statusText;
                 continue;
             }
