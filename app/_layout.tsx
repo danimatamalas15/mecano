@@ -4,7 +4,6 @@ export default function RootLayout() {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="privacidad" options={{ title: "Privacidad" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
