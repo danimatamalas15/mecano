@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.iautobox.twa",
+      "sha256_cert_fingerprints": [
+        "87:F0:4F:F1:AB:E3:D0:90:0E:D7:B2:D2:10:20:B9:C5:F8:8D:50:F9:1F:B9:D5:E7:12:6C:51:82:64:60:AE:57"
+      ]
+    }
+  }
+]
